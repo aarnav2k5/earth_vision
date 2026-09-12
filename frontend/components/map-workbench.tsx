@@ -4,7 +4,8 @@ import "leaflet/dist/leaflet.css";
 
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState, type CSSProperties, type ComponentType, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ComponentType, type ReactNode, type Ref } from "react";
+import type { FeatureGroup as LeafletFeatureGroup } from "leaflet";
 import { AreaChart, Crosshair, Layers, LoaderCircle, Map as MapIcon, Search } from "lucide-react";
 
 import { WorkspaceChatRail } from "@/components/workspace-chat-rail";
@@ -14,12 +15,14 @@ import { useGarudaStore } from "@/store/use-garuda-store";
 import type { AnalysisProposal, AnalysisThresholds, DateRange, GeoJsonGeometry } from "@/types/api";
 
 type MapContainerProps = { center: [number, number]; zoom: number; style?: CSSProperties; children?: ReactNode };
-type EditControlProps = { position?: string; onCreated?: (event: { layer: { toGeoJSON: () => { geometry: GeoJsonGeometry } } }) => void; draw?: Record<string, boolean> };
+type DrawLayer = { toGeoJSON: () => { geometry: GeoJsonGeometry } };
+type EditControlProps = { position?: string; onCreated?: (event: { layer: DrawLayer }) => void; onEdited?: (event: { layers: { eachLayer: (callback: (layer: DrawLayer) => void) => void } }) => void; onDeleted?: () => void; draw?: Record<string, unknown>; edit?: Record<string, unknown> };
+type FeatureGroupProps = { children?: ReactNode; ref?: Ref<LeafletFeatureGroup> };
 type MapViewportProps = { center: [number, number]; zoom: number };
 
 const MapContainer = dynamic<MapContainerProps>(async () => (await import("react-leaflet")).MapContainer as ComponentType<MapContainerProps>, { ssr: false });
 const TileLayer = dynamic(async () => (await import("react-leaflet")).TileLayer, { ssr: false });
-const FeatureGroup = dynamic(async () => (await import("react-leaflet")).FeatureGroup, { ssr: false });
+const FeatureGroup = dynamic<FeatureGroupProps>(async () => (await import("react-leaflet")).FeatureGroup as ComponentType<FeatureGroupProps>, { ssr: false });
 const EditControl = dynamic<EditControlProps>(async () => { await import("leaflet-draw"); const mod = await import("react-leaflet-draw"); return mod.EditControl as ComponentType<EditControlProps>; }, { ssr: false });
 const MapViewport = dynamic<MapViewportProps>(async () => {
   const { useMap } = await import("react-leaflet");
@@ -32,6 +35,13 @@ const MapViewport = dynamic<MapViewportProps>(async () => {
 }, { ssr: false });
 
 const DEFAULT_PROMPT = "analyze new building development near 'infosys pune'";
+const DEFAULT_CENTER: [number, number] = [20.5937, 78.9629];
+
+function extractLocationQuery(prompt: string) {
+  const cleaned = prompt.replace(/[“”]/g, '"').trim();
+  const match = cleaned.match(/\b(?:near|in|at|around)\s+["']?(.+?)["']?(?=\s+(?:from|between)\s+\d{4}|\s+(?:using|with|for)\b|$)/i);
+  return match?.[1]?.replace(/[.,!?]+$/, "").trim() || "";
+}
 
 function dateRangeLabel(range: DateRange) {
   return `${range.start} → ${range.end}`;
@@ -53,9 +63,10 @@ export function MapWorkbench() {
   const [confirmed, setConfirmed] = useState(false);
   const [thresholdsAcknowledged, setThresholdsAcknowledged] = useState(false);
   const [query, setQuery] = useState("");
-  const [mapCenter, setMapCenter] = useState<[number, number]>([20.5937, 78.9629]);
+  const [mapCenter, setMapCenter] = useState<[number, number]>(DEFAULT_CENTER);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
+  const featureGroupRef = useRef<LeafletFeatureGroup | null>(null);
   const thresholdSensitive = thresholds.vegetation < 0.05 || thresholds.water < 0.05 || thresholds.urban_brightness > 100;
   const clearProposal = () => { setProposal(null); setConfirmed(false); setThresholdsAcknowledged(false); setError(null); };
   const updateBefore = (value: DateRange) => { setBefore(value); clearProposal(); };
@@ -90,6 +101,24 @@ export function MapWorkbench() {
       thresholds_acknowledged: thresholdsAcknowledged,
     };
   }, [aoi, proposal, thresholdsAcknowledged]);
+
+  useEffect(() => {
+    const location = extractLocationQuery(prompt);
+    if (!location) return;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 10000);
+    void fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(location)}`, { headers: { "Accept-Language": "en" }, signal: controller.signal })
+      .then((response) => response.ok ? response.json() as Promise<Array<{ lat: string; lon: string; display_name: string }>> : [])
+      .then((results) => {
+        if (!results[0]) return;
+        setMapCenter([Number(results[0].lat), Number(results[0].lon)]);
+        setSearchLabel(results[0].display_name);
+        setQuery(location);
+      })
+      .catch(() => undefined)
+      .finally(() => window.clearTimeout(timeout));
+    return () => { window.clearTimeout(timeout); controller.abort(); };
+  }, [prompt, setSearchLabel]);
 
   const searchLocation = async () => {
     if (!query.trim()) return;
@@ -142,15 +171,21 @@ export function MapWorkbench() {
   };
 
   const prepare = () => { if (!validateInputs()) return; setProposal(buildProposal()); setConfirmed(false); setError(null); };
-  const handleAoiCreated = (event: { layer: { toGeoJSON: () => { geometry: GeoJsonGeometry } } }) => {
+  const handleAoiCreated = (event: { layer: DrawLayer }) => {
+    featureGroupRef.current?.clearLayers();
     setAoi(event.layer.toGeoJSON().geometry);
     if (!validateInputs()) { setProposal(null); setConfirmed(false); return; }
     setProposal(buildProposal());
     setConfirmed(false);
     setError(null);
   };
+  const handleAoiEdited = (event: { layers: { eachLayer: (callback: (layer: DrawLayer) => void) => void } }) => {
+    event.layers.eachLayer((layer) => setAoi(layer.toGeoJSON().geometry));
+    clearProposal();
+  };
   const confirmProposal = () => { setConfirmed(true); void run(proposal, true); };
-  const clearArea = () => { setAoi(null); setProposal(null); setConfirmed(false); setThresholdsAcknowledged(false); setError(null); };
+  const handleAoiDeleted = () => clearArea();
+  const clearArea = () => { featureGroupRef.current?.clearLayers(); setAoi(null); setProposal(null); setConfirmed(false); setThresholdsAcknowledged(false); setError(null); };
 
   return (
     <div className="flex min-h-[calc(100vh-72px)] flex-col lg:flex-row">
@@ -165,9 +200,9 @@ export function MapWorkbench() {
           <MapContainer center={mapCenter} zoom={5} style={{ height: "100%", width: "100%" }}>
             <MapViewport center={mapCenter} zoom={mapCenter[0] === 20.5937 && mapCenter[1] === 78.9629 ? 5 : 12} />
             <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-            <FeatureGroup><EditControl position="topright" onCreated={handleAoiCreated} draw={{ rectangle: false, circle: false, circlemarker: false, marker: false, polyline: false }} /></FeatureGroup>
+            <FeatureGroup ref={featureGroupRef}><EditControl position="topright" onCreated={handleAoiCreated} onEdited={handleAoiEdited} onDeleted={handleAoiDeleted} draw={{ rectangle: false, circle: false, circlemarker: false, marker: false, polyline: false, polygon: { allowIntersection: false, showArea: true, shapeOptions: { color: "#60a5fa", weight: 2 } } }} edit={{ edit: true, remove: true }} /></FeatureGroup>
           </MapContainer>
-          <div className="pointer-events-none absolute left-4 top-4 z-[500] flex gap-2"><span className="rounded-xl border border-white/10 bg-black/70 px-3 py-2 text-xs text-slate-300"><Layers className="mr-2 inline h-3.5 w-3.5" /> Signal layers</span><span className="rounded-xl border border-white/10 bg-black/70 px-3 py-2 text-xs text-slate-300"><Crosshair className="mr-2 inline h-3.5 w-3.5" /> AOI</span></div>
+          <div className="pointer-events-none absolute left-4 top-4 z-[500] flex flex-wrap gap-2"><span className="rounded-xl border border-white/10 bg-black/70 px-3 py-2 text-xs text-slate-300"><Layers className="mr-2 inline h-3.5 w-3.5" /> Satellite map</span><span className="rounded-xl border border-white/10 bg-black/70 px-3 py-2 text-xs text-slate-300"><Crosshair className="mr-2 inline h-3.5 w-3.5" /> {aoi ? "AOI selected" : "Use polygon tool to select AOI"}</span></div>
           <div className="absolute bottom-4 left-4 right-4 z-[500] flex flex-wrap items-end justify-between gap-3">
             <div className="rounded-2xl border border-white/10 bg-black/75 p-3 backdrop-blur-xl"><p className="mb-2 text-[10px] uppercase tracking-widest text-slate-500">Search location</p><div className="flex gap-2"><input value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void searchLocation(); }} placeholder="Infosys Pune" className="w-44 bg-transparent text-xs text-white outline-none placeholder:text-slate-600" /><button type="button" onClick={() => void searchLocation()} disabled={searching} className="rounded-lg bg-white px-3 py-2 text-xs text-black">{searching ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}</button></div>{searchLabel && searchLabel !== "Choose a place and draw an area of interest." ? <p className="mt-2 max-w-60 truncate text-[10px] text-emerald-300">{searchLabel}</p> : null}{searchError ? <p className="mt-2 max-w-52 text-[10px] text-red-300">{searchError}</p> : null}</div>
             <div className="flex gap-2"><button onClick={clearArea} className="rounded-xl border border-white/10 bg-black/70 px-4 py-3 text-xs text-slate-300">Clear area</button><button onClick={() => void run()} disabled={loading} className="rounded-xl bg-white px-4 py-3 text-xs font-medium text-black">{loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <><MapIcon className="mr-2 inline h-3.5 w-3.5" />Analyze area</>}</button></div>
