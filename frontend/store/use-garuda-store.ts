@@ -5,6 +5,7 @@ import type { AnalysisManifest, AnalysisThresholds, AnalyzeResponse, DateRange, 
 
 type GarudaState = {
   aoi: GeoJsonGeometry | null;
+  prompt: string;
   searchLabel: string;
   before: DateRange;
   after: DateRange;
@@ -18,6 +19,7 @@ type GarudaState = {
   ndviOverlayEnabled: boolean;
   changeOverlayEnabled: boolean;
   setAoi: (aoi: GeoJsonGeometry | null) => void;
+  setPrompt: (value: string) => void;
   setSearchLabel: (value: string) => void;
   setBefore: (value: DateRange) => void;
   setAfter: (value: DateRange) => void;
@@ -43,6 +45,7 @@ export const useGarudaStore = create<GarudaState>()(
   persist(
     (set) => ({
       aoi: null,
+      prompt: "",
       searchLabel: "Choose a place and draw an area of interest.",
       before: { start: "2023-01-01", end: "2023-06-30" },
       after: { start: "2024-01-01", end: "2024-06-30" },
@@ -56,6 +59,7 @@ export const useGarudaStore = create<GarudaState>()(
       ndviOverlayEnabled: true,
       changeOverlayEnabled: true,
       setAoi: (aoi) => set({ aoi, ...clearDerivedResults }),
+      setPrompt: (prompt) => set({ prompt }),
       setSearchLabel: (searchLabel) => set({ searchLabel }),
       setBefore: (before) => set({ before, ...clearDerivedResults }),
       setAfter: (after) => set({ after, ...clearDerivedResults }),
@@ -74,6 +78,7 @@ export const useGarudaStore = create<GarudaState>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         aoi: state.aoi,
+        prompt: state.prompt,
         searchLabel: state.searchLabel,
         before: state.before,
         after: state.after,

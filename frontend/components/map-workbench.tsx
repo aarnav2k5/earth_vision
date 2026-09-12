@@ -55,11 +55,11 @@ function validDateRange(range: DateRange) {
 export function MapWorkbench() {
   const searchParams = useSearchParams();
   const {
-    aoi, before, after, cloudCover, thresholds, loading, error, analysis, searchLabel,
-    setAoi, setBefore, setAfter, setCloudCover, setThresholds, setAnalysis, setManifest,
+    aoi, prompt: storedPrompt, before, after, cloudCover, thresholds, loading, error, analysis, searchLabel,
+    setAoi, setBefore, setAfter, setCloudCover, setThresholds, setAnalysis, setManifest, setPrompt: setStoredPrompt,
     setSentinel, setLoading, setError, setSearchLabel,
   } = useGarudaStore();
-  const [prompt, setPrompt] = useState(() => searchParams.get("prompt") ?? DEFAULT_PROMPT);
+  const [prompt, setPrompt] = useState(() => searchParams.get("prompt") ?? storedPrompt ?? DEFAULT_PROMPT);
   const [proposal, setProposal] = useState<AnalysisProposal | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [thresholdsAcknowledged, setThresholdsAcknowledged] = useState(false);
@@ -216,7 +216,7 @@ export function MapWorkbench() {
 
         <div className="mt-4 rounded-2xl border border-white/10 bg-[#101318] p-4">
           <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] uppercase tracking-widest text-slate-600">Analysis proposal</p><p className="mt-1 text-xs text-slate-500">Review the analysis window and thresholds before remote-sensing requests run.</p></div><span className="text-xs text-slate-500">{proposal ? "Ready for confirmation" : "Draw a polygon to generate"}</span></div>
-          <input value={prompt} onChange={(event) => { setPrompt(event.target.value); clearProposal(); }} className="mt-3 w-full bg-transparent text-sm text-slate-300 outline-none" aria-label="Analysis question" />
+          <input value={prompt} onChange={(event) => { const value = event.target.value; setPrompt(value); setStoredPrompt(value); clearProposal(); }} className="mt-3 w-full bg-transparent text-sm text-slate-300 outline-none" aria-label="Analysis question" />
           <p className="mt-2 text-xs text-slate-400">{proposal ? proposal.summary : "The proposal will include vegetation, water, and built-surface change signals."}</p>
           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <label className="text-xs text-slate-500">Before start<input type="date" value={before.start} onChange={(event) => updateBefore({ ...before, start: event.target.value })} className="mt-1 block w-full rounded-lg border border-white/10 bg-black/20 px-2 py-2 text-slate-200" /></label>

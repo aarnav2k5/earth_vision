@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 const links = [
   { href: "/map-view", label: "Map View", icon: Map },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/satellite", label: "NDVI", icon: Activity },
+  { href: "/ndvi", label: "NDVI", icon: Activity },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
