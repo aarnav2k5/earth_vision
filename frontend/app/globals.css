@@ -36,4 +36,70 @@ a {
   background-size: 42px 42px, 42px 42px, auto, auto, auto;
 }
 
+.map-workbench .leaflet-control-zoom,
+.map-workbench .leaflet-draw-toolbar,
+.map-workbench .leaflet-draw-actions {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 12px;
+  background: rgba(7, 11, 16, .92);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .35);
+}
+
+.map-workbench .leaflet-control-zoom a,
+.map-workbench .leaflet-draw-toolbar a {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, .12);
+  background-color: transparent;
+  color: #e2e8f0;
+  line-height: 34px;
+}
+
+.map-workbench .leaflet-control-zoom a:last-child,
+.map-workbench .leaflet-draw-toolbar a:last-child {
+  border-bottom: 0;
+}
+
+.map-workbench .leaflet-control-zoom a:hover,
+.map-workbench .leaflet-draw-toolbar a:hover,
+.map-workbench .leaflet-draw-actions a:hover {
+  background-color: rgba(96, 165, 250, .22);
+}
+
+.map-workbench .leaflet-draw-actions {
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.map-workbench .leaflet-draw-actions a {
+  margin-left: 4px;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 8px;
+  background: #111827;
+  color: #f8fafc;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.map-workbench .leaflet-draw-tooltip {
+  border-color: rgba(96, 165, 250, .7);
+  background: rgba(7, 11, 16, .94);
+  color: #f8fafc;
+  font-size: 12px;
+}
+
+.map-workbench .leaflet-control-attribution {
+  border-radius: 8px 0 0;
+  background: rgba(7, 11, 16, .78);
+  color: #cbd5e1;
+}
+
+.map-workbench .leaflet-control-attribution a {
+  color: #93c5fd;
+}
+
 .noise { background-image: radial-gradient(rgba(255,255,255,.06) .7px, transparent .7px); background-size: 5px 5px; }

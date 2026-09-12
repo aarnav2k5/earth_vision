@@ -1,6 +1,7 @@
 "use client";
 
 import "leaflet/dist/leaflet.css";
+import "leaflet-draw/dist/leaflet.draw.css";
 
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
@@ -186,6 +187,10 @@ export function MapWorkbench() {
   const confirmProposal = () => { setConfirmed(true); void run(proposal, true); };
   const handleAoiDeleted = () => clearArea();
   const clearArea = () => { featureGroupRef.current?.clearLayers(); setAoi(null); setProposal(null); setConfirmed(false); setThresholdsAcknowledged(false); setError(null); };
+  const handlePrimaryAction = () => {
+    if (!proposal) prepare();
+    else if (!confirmed && (!thresholdSensitive || thresholdsAcknowledged)) confirmProposal();
+  };
 
   return (
     <div className="flex min-h-[calc(100vh-72px)] flex-col lg:flex-row">
@@ -196,7 +201,7 @@ export function MapWorkbench() {
           <div className="flex items-center gap-3 text-xs text-slate-500"><span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Live analytics</span><span>{aoi ? "1 area loaded" : "Draw an area to begin"}</span></div>
         </div>
 
-        <div className="relative h-[calc(100vh-160px)] min-h-[620px] overflow-hidden rounded-3xl border border-white/10 bg-[#15222d] shadow-2xl">
+        <div className="map-workbench relative h-[calc(100vh-160px)] min-h-[620px] overflow-hidden rounded-3xl border border-white/10 bg-[#15222d] shadow-2xl">
           <MapContainer center={mapCenter} zoom={5} style={{ height: "100%", width: "100%" }}>
             <MapViewport center={mapCenter} zoom={mapCenter[0] === 20.5937 && mapCenter[1] === 78.9629 ? 5 : 12} />
             <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
@@ -205,7 +210,7 @@ export function MapWorkbench() {
           <div className="pointer-events-none absolute left-4 top-4 z-[500] flex flex-wrap gap-2"><span className="rounded-xl border border-white/10 bg-black/70 px-3 py-2 text-xs text-slate-300"><Layers className="mr-2 inline h-3.5 w-3.5" /> Satellite map</span><span className="rounded-xl border border-white/10 bg-black/70 px-3 py-2 text-xs text-slate-300"><Crosshair className="mr-2 inline h-3.5 w-3.5" /> {aoi ? "AOI selected" : "Use polygon tool to select AOI"}</span></div>
           <div className="absolute bottom-4 left-4 right-4 z-[500] flex flex-wrap items-end justify-between gap-3">
             <div className="rounded-2xl border border-white/10 bg-black/75 p-3 backdrop-blur-xl"><p className="mb-2 text-[10px] uppercase tracking-widest text-slate-500">Search location</p><div className="flex gap-2"><input value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void searchLocation(); }} placeholder="Infosys Pune" className="w-44 bg-transparent text-xs text-white outline-none placeholder:text-slate-600" /><button type="button" onClick={() => void searchLocation()} disabled={searching} className="rounded-lg bg-white px-3 py-2 text-xs text-black">{searching ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}</button></div>{searchLabel && searchLabel !== "Choose a place and draw an area of interest." ? <p className="mt-2 max-w-60 truncate text-[10px] text-emerald-300">{searchLabel}</p> : null}{searchError ? <p className="mt-2 max-w-52 text-[10px] text-red-300">{searchError}</p> : null}</div>
-            <div className="flex gap-2"><button onClick={clearArea} className="rounded-xl border border-white/10 bg-black/70 px-4 py-3 text-xs text-slate-300">Clear area</button><button onClick={() => void run()} disabled={loading} className="rounded-xl bg-white px-4 py-3 text-xs font-medium text-black">{loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <><MapIcon className="mr-2 inline h-3.5 w-3.5" />Analyze area</>}</button></div>
+            <div className="flex gap-2"><button type="button" onClick={clearArea} disabled={!aoi && !analysis} className="rounded-xl border border-white/10 bg-black/80 px-4 py-3 text-xs text-slate-200 disabled:cursor-not-allowed disabled:opacity-40">Clear area</button><button type="button" onClick={handlePrimaryAction} disabled={loading || confirmed || (thresholdSensitive && !thresholdsAcknowledged)} className="rounded-xl bg-white px-4 py-3 text-xs font-medium text-black disabled:cursor-not-allowed disabled:opacity-50">{loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <><MapIcon className="mr-2 inline h-3.5 w-3.5" />{proposal ? "Confirm & run" : "Prepare analysis"}</>}</button></div>
           </div>
         </div>
 
