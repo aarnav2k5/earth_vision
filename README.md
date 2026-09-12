@@ -138,6 +138,15 @@ docker build -t earth-vision-api .
 docker run --env-file .env -p 8000:8000 earth-vision-api
 ```
 
+## Deployment
+
+The repository includes deployment-ready configuration for the split production architecture:
+
+- `render.yaml` deploys the Dockerized backend from `backend/` on Render.
+- `frontend/vercel.json` configures the Next.js frontend for Vercel.
+- `docs/deployment.md` contains the production setup and smoke-test checklist.
+- `Makefile` provides repeatable local checks and build commands.
+
 ## API Reference
 
 | Method | Endpoint | Description |
