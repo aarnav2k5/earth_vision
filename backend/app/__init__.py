@@ -1,1 +1,1 @@
-"""Garuda Lens backend package."""
+"""Earth Vision backend package."""

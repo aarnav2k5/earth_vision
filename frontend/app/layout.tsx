@@ -5,7 +5,7 @@ import { AppShell } from "@/components/app-shell";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Garuda Lens",
+  title: "Earth Vision",
   description: "Open-source satellite land-use change detection platform.",
 };
 

@@ -11,21 +11,20 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "#eef4ea",
-        foreground: "#102218",
-        card: "#f9fbf4",
-        border: "#d5e2d1",
-        primary: "#355f3b",
-        secondary: "#d9e6d4",
-        accent: "#7b9c5c",
-        muted: "#5a6e5d"
+        background: "#080b0f",
+        foreground: "#f5f7fb",
+        card: "#101318",
+        border: "#252a33",
+        primary: "#dbe7ff",
+        secondary: "#171c24",
+        accent: "#67e8f9",
+        muted: "#8b93a4"
       },
       boxShadow: {
-        soft: "0 24px 50px rgba(16, 34, 24, 0.08)"
+        soft: "0 24px 70px rgba(0, 0, 0, 0.28)"
       },
       backgroundImage: {
-        "hero-grid":
-          "radial-gradient(circle at top left, rgba(123,156,92,0.22), transparent 28%), linear-gradient(135deg, rgba(255,255,255,0.7), rgba(233,242,227,0.9))"
+        "hero-grid": "radial-gradient(circle at 20% 0%, rgba(29,78,216,.18), transparent 35%), radial-gradient(circle at 90% 100%, rgba(234,88,12,.15), transparent 30%), #080b0f"
       }
     },
   },

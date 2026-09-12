@@ -1,10 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-
-from openai import OpenAI
-from openai import AuthenticationError
-from openai import OpenAIError
+import requests
 
 from app.core.config import settings
 from app.models.schemas import AiInsightInput
@@ -12,17 +9,12 @@ from app.models.schemas import AiInsightInput
 
 class GroqInsightService:
     def __init__(self) -> None:
-        self.client = (
-            OpenAI(
-                api_key=settings.groq_api_key,
-                base_url="https://api.groq.com/openai/v1",
-            )
-            if settings.groq_api_key
-            else None
-        )
+        configured_key = settings.groq_api_key.strip()
+        self.enabled = bool(configured_key and configured_key != "your_groq_api_key_here")
+        self.api_key = configured_key
 
     async def generate_insight(self, payload: AiInsightInput) -> str:
-        if not settings.groq_api_key:
+        if not self.enabled:
             return "Groq API key is not configured. Add GROQ_API_KEY to backend/.env to enable AI insights."
 
         user_question = payload.question or "Provide a balanced site assessment."
@@ -61,26 +53,57 @@ Preferred format:
             "Never add unrelated information or make professional, legal, causal, or suitability claims."
         )
 
-        if self.client is None:
+        if not self.api_key:
             return "Groq API key is not configured. Add GROQ_API_KEY to backend/.env to enable AI insights."
 
         try:
-            response = await asyncio.to_thread(
-                self.client.chat.completions.create,
-                model=settings.groq_model,
-                messages=[
+            response = await asyncio.wait_for(
+                asyncio.to_thread(
+                    self._request_groq,
+                    instructions,
+                    prompt,
+                ),
+                timeout=20.0,
+            )
+        except asyncio.TimeoutError:
+            return "Groq request timed out. Check backend internet access and try again."
+        except requests.exceptions.Timeout:
+            return "Groq request timed out. Check backend internet access and try again."
+        except requests.exceptions.HTTPError as exc:
+            if exc.response is not None and exc.response.status_code in {401, 403}:
+                return (
+                    "Groq authentication failed. Check that GROQ_API_KEY in backend/.env is a valid Groq API key, "
+                    "then restart the backend."
+                )
+            detail = exc.response.text[:300] if exc.response is not None else str(exc)
+            return f"Groq request failed: {detail}"
+        except requests.exceptions.RequestException as exc:
+            return f"Groq request failed: {exc}"
+
+        answer = response.get("choices", [{}])[0].get("message", {}).get("content")
+        return (answer or "No AI insight was returned.").strip()
+
+    def _request_groq(self, instructions: str, prompt: str) -> dict:
+        response = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+                # This avoids the hanging HTTP/2/proxy path used by the OpenAI client.
+                "Connection": "close",
+                "Expect": "",
+            },
+            json={
+                "model": settings.groq_model,
+                "messages": [
                     {"role": "system", "content": instructions},
                     {"role": "user", "content": prompt},
                 ],
-                temperature=0.2,
-            )
-        except AuthenticationError:
-            return (
-                "Groq authentication failed. Check that GROQ_API_KEY in backend/.env is a valid Groq API key, "
-                "then restart the backend."
-            )
-        except OpenAIError as exc:
-            return f"Groq request failed: {exc}"
-
-        answer = response.choices[0].message.content if response.choices else None
-        return (answer or "No AI insight was returned.").strip()
+                "temperature": 0.2,
+                "reasoning_effort": "low",
+                "max_tokens": 500,
+            },
+            timeout=(5.0, 15.0),
+        )
+        response.raise_for_status()
+        return response.json()

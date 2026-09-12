@@ -3,13 +3,14 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 body {
   min-height: 100vh;
-  background: #eef4ea;
-  color: #102218;
+  background: #080b0f;
+  color: #f5f7fb;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 * {
@@ -20,3 +21,19 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+.garuda-frame {
+  min-height: 100vh;
+  background: linear-gradient(90deg, rgba(45,212,191,.7), transparent 13%, transparent 88%, rgba(251,146,60,.65)), linear-gradient(135deg, #080b0f 0%, #080b0f 70%, #101421 100%);
+}
+
+.glow-border { position: relative; }
+.glow-border::before { position: absolute; inset: -1px; z-index: -1; border-radius: inherit; background: linear-gradient(120deg, rgba(59,130,246,.9), rgba(168,85,247,.6) 48%, rgba(249,115,22,.8)); content: ""; }
+
+.map-surface {
+  background-color: #162633;
+  background-image: linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px), radial-gradient(circle at 35% 40%, rgba(43,124,158,.65), transparent 25%), radial-gradient(circle at 70% 55%, rgba(47,91,62,.8), transparent 24%), linear-gradient(140deg, #16212b, #253c4d 42%, #153029);
+  background-size: 42px 42px, 42px 42px, auto, auto, auto;
+}
+
+.noise { background-image: radial-gradient(rgba(255,255,255,.06) .7px, transparent .7px); background-size: 5px 5px; }

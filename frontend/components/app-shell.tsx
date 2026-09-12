@@ -1,46 +1,41 @@
-import Link from "next/link";
-import { BarChart3, Bot, Home, Map, Satellite } from "lucide-react";
+"use client";
 
-import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
+import { Activity, BarChart3, Map, Moon, Sparkles } from "lucide-react";
+import { usePathname } from "next/navigation";
+
 import { cn } from "@/lib/utils";
 
 const links = [
-  { href: "/", label: "Overview", icon: Home },
   { href: "/map-view", label: "Map View", icon: Map },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/satellite", label: "Satellite", icon: Satellite },
-  { href: "/ai-chat", label: "AI Chat", icon: Bot },
+  { href: "/satellite", label: "NDVI", icon: Activity },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  if (pathname === "/") return <>{children}</>;
+
   return (
-    <div className="min-h-screen bg-background bg-hero-grid text-foreground">
-      <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-4 py-6 lg:px-8">
-        <header className="mb-8 flex flex-col gap-5 rounded-[32px] border border-white/60 bg-white/60 px-6 py-5 shadow-soft backdrop-blur lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <Badge className="mb-3">Garuda Lens</Badge>
-            <h1 className="text-3xl font-semibold tracking-tight">Satellite land-use intelligence for real-world decisions.</h1>
-            <p className="mt-2 max-w-2xl text-sm text-muted">
-              Compare Sentinel-2 imagery across time, detect vegetation, urban, and water change, then surface locally grounded planning insights.
-            </p>
-          </div>
-          <nav className="flex flex-wrap gap-2">
-            {links.map(({ href, label, icon: Icon }) => (
-              <Link
-                key={href}
-                href={href}
-                className={cn(
-                  "inline-flex items-center gap-2 rounded-full border border-border bg-card/90 px-4 py-2 text-sm font-medium text-foreground transition hover:bg-white"
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                {label}
-              </Link>
-            ))}
-          </nav>
-        </header>
-        <main className="flex-1">{children}</main>
-      </div>
+    <div className="garuda-frame min-h-screen text-foreground">
+      <header className="flex h-[72px] items-center gap-6 border-b border-white/10 bg-black/30 px-6 backdrop-blur-xl">
+        <Link href="/" className="flex w-[220px] items-center gap-3 text-sm font-semibold tracking-tight">
+          <span className="grid h-8 w-8 place-items-center rounded-xl bg-white text-black"><Sparkles className="h-4 w-4" /></span>
+          <span>Earth Vision</span>
+        </Link>
+        <nav className="flex h-10 flex-1 justify-center gap-1 rounded-full border border-white/10 bg-white/[.03] p-1">
+          {links.map(({ href, label, icon: Icon }) => (
+            <Link key={href} href={href} className={cn("flex min-w-[130px] items-center justify-center gap-2 rounded-full px-5 text-xs font-medium text-slate-500 transition hover:text-white", pathname === href && "bg-white text-black")}>
+              <Icon className="h-3.5 w-3.5" />{label}
+            </Link>
+          ))}
+        </nav>
+        <div className="flex w-[220px] items-center justify-end gap-4 text-xs text-slate-500">
+          <span className="hidden items-center gap-2 sm:flex"><span className="h-2 w-2 rounded-full bg-emerald-400" /> NDVI data available</span>
+          <button type="button" aria-label="Dark theme active" title="Dark theme active" className="rounded-lg p-1 text-slate-500"><Moon className="h-4 w-4" /></button>
+        </div>
+      </header>
+      <main className="min-h-[calc(100vh-72px)]">{children}</main>
     </div>
   );
 }

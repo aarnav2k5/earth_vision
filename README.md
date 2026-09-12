@@ -134,8 +134,8 @@ Build and run the backend container:
 
 ```bash
 cd backend
-docker build -t garuda-lens-api .
-docker run --env-file .env -p 8000:8000 garuda-lens-api
+docker build -t earth-vision-api .
+docker run --env-file .env -p 8000:8000 earth-vision-api
 ```
 
 ## API Reference
@@ -195,6 +195,9 @@ cd backend
 source .venv/bin/activate
 python -m compileall app
 python -c "from app.main import app; print(app.title)"
+
+# Provider-independent regression checks
+python -m unittest discover -s tests -p 'test_*.py'
 ```
 
 Quick API smoke test:

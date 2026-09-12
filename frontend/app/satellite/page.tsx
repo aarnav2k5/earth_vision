@@ -1,51 +1,12 @@
 "use client";
 
+import { CalendarDays, Download, Eye, RefreshCcw, Satellite as SatelliteIcon } from "lucide-react";
 import { SatelliteSplitView } from "@/components/satellite-split-view";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { WorkspaceChatRail } from "@/components/workspace-chat-rail";
 import { useGarudaStore } from "@/store/use-garuda-store";
 
 export default function SatellitePage() {
   const sentinel = useGarudaStore((state) => state.sentinel);
-
-  return (
-    <div className="space-y-6">
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>Before Image</CardTitle>
-              <CardDescription>Selected from the earlier analysis window using minimum cloud cover.</CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {sentinel?.before_preview_url ? (
-              <div className="flex h-[360px] items-center justify-center rounded-[28px] border border-border bg-[#0f1720] p-3">
-                <img src={sentinel.before_preview_url} alt="Before preview" className="h-full w-full object-contain" />
-              </div>
-            ) : (
-              <p className="text-sm text-muted">No before image loaded yet.</p>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>After Image</CardTitle>
-              <CardDescription>Selected from the later analysis window using minimum cloud cover.</CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {sentinel?.after_preview_url ? (
-              <div className="flex h-[360px] items-center justify-center rounded-[28px] border border-border bg-[#0f1720] p-3">
-                <img src={sentinel.after_preview_url} alt="After preview" className="h-full w-full object-contain" />
-              </div>
-            ) : (
-              <p className="text-sm text-muted">No after image loaded yet.</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-      <SatelliteSplitView beforeUrl={sentinel?.before_preview_url} afterUrl={sentinel?.after_preview_url} />
-    </div>
-  );
+  const downloadUrl = sentinel?.after_preview_url ?? sentinel?.before_preview_url;
+  return <div className="flex min-h-[calc(100vh-72px)] flex-col lg:flex-row"><WorkspaceChatRail /><section className="min-w-0 flex-1 bg-[#0b0e12] p-6 lg:p-8"><div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex items-center gap-2 text-xs text-purple-300"><SatelliteIcon className="h-4 w-4" /> Satellite data</div><h1 className="mt-2 text-2xl font-semibold">Before / after imagery</h1><p className="mt-1 text-xs text-slate-600">Compare selected scenes and inspect the visual evidence behind the analysis.</p></div><div className="flex gap-2"><a href={downloadUrl ?? undefined} download="earth-vision-satellite-preview.jpg" aria-disabled={!downloadUrl} className="rounded-xl border border-white/10 p-3 text-slate-400 aria-disabled:pointer-events-none aria-disabled:opacity-40" title="Download preview"><Download className="h-4 w-4" /></a><button type="button" onClick={() => window.location.reload()} className="rounded-xl border border-white/10 p-3 text-slate-400" title="Refresh imagery" aria-label="Refresh imagery"><RefreshCcw className="h-4 w-4" /></button></div></div><div className="mt-6 flex items-center gap-4 rounded-2xl border border-white/10 bg-[#101318] px-5 py-4 text-xs text-slate-500"><CalendarDays className="h-4 w-4" />{sentinel ? <><span>Before {sentinel.before_acquired}</span><span>→</span><span>After {sentinel.after_acquired}</span></> : <span>Run an analysis to load scene dates and previews.</span>}<span className="ml-auto flex items-center gap-2 text-emerald-400"><Eye className="h-4 w-4" /> Preview mode</span></div><div className="mt-4 grid gap-4 lg:grid-cols-2">{[["Before", sentinel?.before_preview_url], ["After", sentinel?.after_preview_url]].map(([label, url]) => <div key={label} className="overflow-hidden rounded-2xl border border-white/10 bg-[#101318]"><div className="flex items-center justify-between border-b border-white/10 px-4 py-3 text-xs"><span>{label} scene</span><span className="text-slate-600">Sentinel-2 L2A</span></div>{url ? <img src={url} alt={`${label} satellite preview`} className="h-64 w-full object-cover" /> : <div className="map-surface flex h-64 items-center justify-center text-xs text-slate-500">No scene loaded yet</div>}</div>)}</div><div className="mt-4"><SatelliteSplitView beforeUrl={sentinel?.before_preview_url} afterUrl={sentinel?.after_preview_url} /></div></section></div>;
 }

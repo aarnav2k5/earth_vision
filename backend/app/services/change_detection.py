@@ -11,11 +11,12 @@ def _normalize_to_uint8(rgb: np.ndarray) -> np.ndarray:
     if rgb.dtype == np.uint8:
         return rgb
     rgb = rgb.astype(np.float32)
-    rgb_min = float(np.min(rgb))
-    rgb_max = float(np.max(rgb))
-    if rgb_max - rgb_min < 1e-6:
-        return np.zeros_like(rgb, dtype=np.uint8)
-    scaled = ((rgb - rgb_min) / (rgb_max - rgb_min) * 255.0).clip(0, 255)
+    # Sentinel-2 L2A reflectance is normally stored as integer values in the
+    # 0..10000 range.  Keep a stable physical scale so the urban threshold is
+    # meaningful across before/after images instead of scaling each image by
+    # its own min/max and turning ordinary contrast into apparent change.
+    scale = 10000.0 if float(np.nanmax(rgb)) > 1.5 else 1.0
+    scaled = (rgb / scale * 255.0).clip(0, 255)
     return scaled.astype(np.uint8)
 
 
@@ -38,6 +39,7 @@ def compute_change_metrics(
     vegetation_threshold: float = 0.18,
     water_threshold: float = 0.12,
     urban_brightness_threshold: float = 25.0,
+    area_hectares: float | None = None,
 ) -> tuple[ChangeMetrics, dict[str, np.ndarray]]:
     ndvi_diff = np.nan_to_num(ndvi_after - ndvi_before, nan=0.0)
     ndwi_diff = np.nan_to_num(ndwi_after - ndwi_before, nan=0.0)
@@ -45,8 +47,8 @@ def compute_change_metrics(
     veg_change_mask = (np.abs(ndvi_diff) >= vegetation_threshold) & valid_mask
     water_change_mask = (np.abs(ndwi_diff) >= water_threshold) & valid_mask
 
-    rgb_before_f = rgb_before.astype(np.float32)
-    rgb_after_f = rgb_after.astype(np.float32)
+    rgb_before_f = _normalize_to_uint8(rgb_before).astype(np.float32)
+    rgb_after_f = _normalize_to_uint8(rgb_after).astype(np.float32)
     brightness_before = rgb_before_f.mean(axis=2)
     brightness_after = rgb_after_f.mean(axis=2)
     brightness_delta = brightness_after - brightness_before
@@ -85,7 +87,7 @@ def compute_change_metrics(
         ndvi_delta=round(float(np.mean(ndvi_after[valid_mask] - ndvi_before[valid_mask])) if valid_pixels else 0.0, 4),
         ndwi_delta=round(float(np.mean(ndwi_after[valid_mask] - ndwi_before[valid_mask])) if valid_pixels else 0.0, 4),
         valid_coverage_percent=0.0,
-        area_hectares=round(valid_pixels * 0.01, 2),
+        area_hectares=round(area_hectares if area_hectares is not None else valid_pixels * 0.01, 2),
     )
 
     overlays = {

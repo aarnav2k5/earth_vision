@@ -1,1 +1,1 @@
-"""Pydantic schemas for Garuda Lens."""
+"""Pydantic schemas for Earth Vision."""

@@ -1,1 +1,1 @@
-"""API routes for Garuda Lens."""
+"""API routes for Earth Vision."""

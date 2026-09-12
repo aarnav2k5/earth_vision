@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import cv2
+import logging
 import numpy as np
 import time
 from fastapi import APIRouter, HTTPException, Query
-import planetary_computer
-from shapely.geometry import box, mapping
+from pyproj import Geod
+from shapely.geometry import box, mapping, shape
 
 from app.models.schemas import (
     AiInsightInput,
@@ -19,10 +20,11 @@ from app.models.schemas import (
 from app.services.ai_service import GroqInsightService
 from app.services.change_detection import compute_change_metrics
 from app.services.indices import compute_ndvi, compute_ndwi
-from app.services.stac_service import SentinelService
+from app.services.stac_service import SentinelService, _sign_url_with_timeout
 
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 sentinel_service = SentinelService()
 ai_service = GroqInsightService()
 PROCESSING_VERSION = "1.1.0"
@@ -57,6 +59,11 @@ def _bbox_to_aoi(bbox: str) -> dict:
     return mapping(box(minx, miny, maxx, maxy))
 
 
+def _aoi_area_hectares(aoi: dict) -> float:
+    area_square_meters, _ = Geod(ellps="WGS84").geometry_area_perimeter(shape(aoi))
+    return abs(float(area_square_meters)) / 10_000.0
+
+
 def _resize_band(band: np.ndarray, target_shape: tuple[int, int]) -> np.ndarray:
     if band.shape == target_shape:
         return band
@@ -79,7 +86,7 @@ def _resize_rgb(rgb: np.ndarray, target_shape: tuple[int, int]) -> np.ndarray:
 def _analyze(request: AreaRequest) -> AnalyzeAreaResponse:
     started_at = time.perf_counter()
 
-    print("[Garuda Lens] analyze-area: fetching before scene")
+    logger.info("analyze-area: fetching before scene")
     before_range = _iso_date_range(request.before)
     after_range = _iso_date_range(request.after)
     before_scene = sentinel_service.fetch_scene_data(
@@ -87,16 +94,16 @@ def _analyze(request: AreaRequest) -> AnalyzeAreaResponse:
         before_range,
         request.max_cloud_cover,
     )
-    print(f"[Garuda Lens] analyze-area: before scene ready in {time.perf_counter() - started_at:.2f}s")
+    logger.info("analyze-area: before scene ready in %.2fs", time.perf_counter() - started_at)
 
     after_started_at = time.perf_counter()
-    print("[Garuda Lens] analyze-area: fetching after scene")
+    logger.info("analyze-area: fetching after scene")
     after_scene = sentinel_service.fetch_scene_data(
         request.aoi,
         after_range,
         request.max_cloud_cover,
     )
-    print(f"[Garuda Lens] analyze-area: after scene ready in {time.perf_counter() - after_started_at:.2f}s")
+    logger.info("analyze-area: after scene ready in %.2fs", time.perf_counter() - after_started_at)
 
     target_shape = before_scene.red.shape
     after_scene.red = _resize_band(after_scene.red, target_shape)
@@ -109,7 +116,7 @@ def _analyze(request: AreaRequest) -> AnalyzeAreaResponse:
     before_scene.valid_mask = _resize_mask(before_scene.valid_mask, target_shape)
 
     metrics_started_at = time.perf_counter()
-    print("[Garuda Lens] analyze-area: computing indices and change metrics")
+    logger.info("analyze-area: computing indices and change metrics")
     ndvi_before = compute_ndvi(before_scene.nir, before_scene.red)
     ndvi_after = compute_ndvi(after_scene.nir, after_scene.red)
     ndwi_before = compute_ndwi(before_scene.green, before_scene.nir)
@@ -141,6 +148,7 @@ def _analyze(request: AreaRequest) -> AnalyzeAreaResponse:
         vegetation_threshold=request.thresholds.vegetation,
         water_threshold=request.thresholds.water,
         urban_brightness_threshold=request.thresholds.urban_brightness,
+        area_hectares=_aoi_area_hectares(request.aoi) * shared_valid_percent / 100.0,
     )
     metrics.valid_coverage_percent = round(shared_valid_percent, 2)
     warnings: list[str] = []
@@ -167,8 +175,8 @@ def _analyze(request: AreaRequest) -> AnalyzeAreaResponse:
             recommendations.append("Water signal changed materially; investigate drainage, flooding, or seasonal water variation.")
     if not recommendations and not threshold_sensitivity:
         recommendations.append("No obvious satellite signal requiring investigation; validate this screening result with local evidence.")
-    print(f"[Garuda Lens] analyze-area: metrics ready in {time.perf_counter() - metrics_started_at:.2f}s")
-    print(f"[Garuda Lens] analyze-area: complete in {time.perf_counter() - started_at:.2f}s")
+    logger.info("analyze-area: metrics ready in %.2fs", time.perf_counter() - metrics_started_at)
+    logger.info("analyze-area: complete in %.2fs", time.perf_counter() - started_at)
 
     return AnalyzeAreaResponse(
         metrics=metrics,
@@ -212,8 +220,8 @@ def fetch_sentinel(request: AreaRequest) -> FetchSentinelResponse:
     return FetchSentinelResponse(
         before_scene_id=before_scene.id,
         after_scene_id=after_scene.id,
-        before_preview_url=planetary_computer.sign(before_preview.href) if before_preview else None,
-        after_preview_url=planetary_computer.sign(after_preview.href) if after_preview else None,
+        before_preview_url=_sign_url_with_timeout(before_preview.href) if before_preview else None,
+        after_preview_url=_sign_url_with_timeout(after_preview.href) if after_preview else None,
         before_acquired=before_scene.properties.get("datetime", ""),
         after_acquired=after_scene.properties.get("datetime", ""),
     )
@@ -269,6 +277,8 @@ def get_change(
             max_cloud_cover=max_cloud_cover,
         )
         return _analyze(request).metrics
+    except InsufficientEvidenceError as exc:
+        raise HTTPException(status_code=422, detail=exc.details) from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

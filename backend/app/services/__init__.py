@@ -1,1 +1,1 @@
-"""Service layer for Garuda Lens."""
+"""Service layer for Earth Vision."""

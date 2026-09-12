@@ -84,6 +84,7 @@ export type AnalysisProposal = {
   after: DateRange;
   max_cloud_cover: number;
   thresholds: AnalysisThresholds;
+  thresholds_acknowledged?: boolean;
 };
 
 export type AnalysisManifest = {

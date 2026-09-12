@@ -1,1 +1,1 @@
-"""Core configuration for Garuda Lens."""
+"""Core configuration for Earth Vision."""

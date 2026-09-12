@@ -50,7 +50,7 @@ export function AiChatPanel() {
       <CardHeader>
         <div>
           <CardTitle>Local Advisory Chat</CardTitle>
-          <CardDescription>Ask planning and land-use questions based on the latest Garuda Lens metrics.</CardDescription>
+          <CardDescription>Ask planning and land-use questions based on the latest Earth Vision metrics.</CardDescription>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">

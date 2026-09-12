@@ -1,5 +1,9 @@
+"use client";
+
+import { Bot, CheckCircle2, ShieldAlert, Sparkles } from "lucide-react";
 import { AiChatPanel } from "@/components/ai-chat-panel";
+import { WorkspaceChatRail } from "@/components/workspace-chat-rail";
 
 export default function AiChatPage() {
-  return <AiChatPanel />;
+  return <div className="flex min-h-[calc(100vh-72px)] flex-col lg:flex-row"><WorkspaceChatRail /><section className="min-w-0 flex-1 bg-[#0b0e12] p-6 lg:p-8"><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-purple-500/10 text-purple-300"><Sparkles className="h-5 w-5" /></span><div><h1 className="text-2xl font-semibold">Detailed AI insights</h1><p className="mt-1 text-xs text-slate-600">Grounded only in computed metrics, recommendations, and warnings.</p></div></div><div className="mt-6 grid gap-4 xl:grid-cols-[1.35fr_.8fr]"><AiChatPanel /><div className="space-y-4"><div className="rounded-2xl border border-white/10 bg-[#101318] p-5"><div className="flex items-center gap-2 text-sm font-medium"><Bot className="h-4 w-4 text-blue-400" /> Analysis guardrails</div><div className="mt-5 space-y-4 text-xs leading-5 text-slate-400"><p className="flex gap-3"><CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />Uses only supplied site metrics.</p><p className="flex gap-3"><ShieldAlert className="h-4 w-4 shrink-0 text-amber-400" />Does not determine legality, profitability, causation, or suitability.</p><p className="flex gap-3"><Sparkles className="h-4 w-4 shrink-0 text-purple-400" />Warnings remain visible with every response.</p></div></div><div className="rounded-2xl border border-blue-400/20 bg-blue-400/[.04] p-5 text-sm text-slate-300"><strong className="text-blue-300">Environmental context</strong><p className="mt-3 text-xs leading-5 text-slate-500">A screening insight is a prompt for follow-up investigation, not a final determination.</p></div></div></div></section></div>;
 }

@@ -1,86 +1,27 @@
 "use client";
 
 import Link from "next/link";
+import { AlertTriangle, BarChart3, CalendarDays, Leaf, Sparkles, Waves } from "lucide-react";
 
-import { AnalyticsCharts } from "@/components/analytics-charts";
 import { AnalysisExports } from "@/components/analysis-exports";
-import { MetricCard } from "@/components/metric-card";
 import { SignalMaskPreview } from "@/components/signal-mask-preview";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatPercent } from "@/lib/utils";
+import { WorkspaceChatRail } from "@/components/workspace-chat-rail";
 import { useGarudaStore } from "@/store/use-garuda-store";
+
+function Metric({ label, value, color, icon: Icon }: { label: string; value: string; color: string; icon: typeof Leaf }) {
+  return <div className="rounded-2xl border border-white/10 bg-[#101318] p-5"><div className="flex items-center justify-between text-xs text-slate-500"><span>{label}</span><Icon className="h-4 w-4" style={{ color }} /></div><p className="mt-3 text-2xl font-semibold" style={{ color }}>{value}</p></div>;
+}
 
 export default function AnalyticsPage() {
   const analysis = useGarudaStore((state) => state.analysis);
-  const manifest = useGarudaStore((state) => state.manifest);
-  const metrics = analysis?.metrics ?? null;
+  const metrics = analysis?.metrics;
+  const format = (value: number | undefined, sign = false) => value === undefined ? "—" : `${sign && value > 0 ? "+" : ""}${value}%`;
+  const bars = metrics ? [
+    { label: "Vegetation", value: Math.abs(metrics.vegetation_change), color: "bg-emerald-400" },
+    { label: "Urban", value: Math.abs(metrics.urban_change), color: "bg-blue-400" },
+    { label: "Water", value: Math.abs(metrics.water_change), color: "bg-cyan-400" },
+  ] : [];
+  const maxBar = Math.max(...bars.map((bar) => bar.value), 1);
 
-  if (!metrics) {
-    return (
-      <Card>
-        <CardHeader>
-          <div>
-            <CardTitle>No Analysis Loaded</CardTitle>
-            <CardDescription>
-              Run an AOI analysis from the map workflow first. The latest metrics will stay available here after navigation.
-            </CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Button asChild>
-            <Link href="/map-view">Go To Map View</Link>
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="grid gap-6 lg:grid-cols-4">
-        <MetricCard
-          title="Total Change"
-          value={formatPercent(metrics?.total_change ?? 0)}
-          description="Combined share of AOI pixels with material vegetation, urban, or water change."
-        />
-        <MetricCard
-          title="Vegetation"
-          value={formatPercent(metrics?.vegetation_change ?? 0)}
-          description="Change derived from NDVI deltas across the selected time windows."
-        />
-        <MetricCard
-          title="Urban Expansion"
-          value={formatPercent(metrics?.urban_change ?? 0)}
-          description="Heuristic bright built-surface change signal; not proof of buildings or urbanization."
-        />
-        <MetricCard
-          title="Water"
-          value={formatPercent(metrics?.water_change ?? 0)}
-          description="Difference in surface water signature based on NDWI movement."
-        />
-      </div>
-      <AnalyticsCharts metrics={metrics} />
-      {analysis ? <SignalMaskPreview masks={[{ name: "Vegetation", values: analysis.vegetation_change_mask, color: "#9fc37f" }, { name: "Water", values: analysis.water_change_mask, color: "#4ea3d8" }, { name: "Urban Expansion", values: analysis.urban_change_mask, color: "#e6a84a" }]} /> : null}
-      {manifest ? (
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>Recommendations and warnings</CardTitle>
-              <CardDescription>Deterministic screening outputs grounded in the selected scenes and thresholds.</CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {manifest.recommendations.map((recommendation) => <div key={recommendation} className="rounded-2xl bg-secondary/70 p-4 text-sm">{recommendation}</div>)}
-            {manifest.warnings.map((warning) => <div key={warning} className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">{warning}</div>)}
-            <details className="rounded-2xl border border-border p-4 text-sm">
-              <summary className="cursor-pointer font-medium">Technical details</summary>
-              <p className="mt-3 text-muted">Analysis {manifest.analysis_id} · Processing {manifest.processing_version} · Valid coverage {metrics.valid_coverage_percent}% · Approximate area {metrics.area_hectares} hectares · Thresholds: vegetation {manifest.thresholds.vegetation}, water {manifest.thresholds.water}, urban brightness {manifest.thresholds.urban_brightness}.</p>
-            </details>
-          </CardContent>
-        </Card>
-      ) : null}
-      <AnalysisExports />
-    </div>
-  );
+  return <div className="flex min-h-[calc(100vh-72px)] flex-col lg:flex-row"><WorkspaceChatRail /><section className="min-w-0 flex-1 overflow-auto bg-[#0b0e12] p-5 lg:p-8"><div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex items-center gap-2 text-xs text-emerald-400"><Leaf className="h-4 w-4" /> NDVI Vegetation Analysis</div><h1 className="mt-2 text-2xl font-semibold">Change detection analytics</h1><p className="mt-1 text-xs text-slate-600">Satellite-powered analysis with grounded metrics and visible limitations.</p></div><div className="flex items-center gap-3 text-xs text-slate-500"><span className="flex items-center gap-2"><Sparkles className="h-3.5 w-3.5 text-purple-400" /> AI Enhanced</span><span className="flex items-center gap-2"><CalendarDays className="h-3.5 w-3.5" /> Before / After</span></div></div><div className="mt-6 flex rounded-xl border border-white/10 bg-[#101318] p-1 text-xs text-slate-600"><span className="flex-1 rounded-lg bg-white px-4 py-2 text-center text-black">Overview</span><Link href="/map-view" className="flex-1 px-4 py-2 text-center">Analysis Details</Link><Link href="/satellite" className="flex-1 px-4 py-2 text-center">Satellite Data</Link><Link href="/ai-chat" className="flex-1 px-4 py-2 text-center">Insights</Link></div>{!metrics ? <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/[.03] p-6 text-sm text-slate-400">No analysis is loaded yet. Draw an AOI and run an analysis from <Link href="/map-view" className="text-white underline">Map View</Link>.</div> : null}<div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><Metric label="Total Change" value={format(metrics?.total_change)} color="#f8fafc" icon={BarChart3} /><Metric label="Vegetation Change" value={format(metrics?.vegetation_change, true)} color="#34d399" icon={Leaf} /><Metric label="Urban Change" value={format(metrics?.urban_change)} color="#60a5fa" icon={BarChart3} /><Metric label="Water Change" value={format(metrics?.water_change)} color="#f87171" icon={Waves} /></div><div className="mt-4 grid gap-4 xl:grid-cols-2"><div className="rounded-2xl border border-white/10 bg-[#101318] p-5"><div className="flex items-center justify-between"><div><h2 className="text-sm font-medium">Land Use Change Distribution</h2><p className="mt-1 text-xs text-slate-600">Absolute detected signal percentage from the current analysis.</p></div><BarChart3 className="h-4 w-4 text-emerald-400" /></div>{bars.length ? <div className="mt-7 flex h-52 items-end justify-around gap-6 border-b border-white/10 px-8">{bars.map((bar) => <div key={bar.label} className="flex h-full flex-1 flex-col items-center justify-end gap-2"><span className="text-xs text-slate-400">{bar.value}%</span><div className={`w-full max-w-16 rounded-t-lg ${bar.color}`} style={{ height: `${Math.max(6, bar.value / maxBar * 100)}%` }} /><span className="text-[10px] text-slate-600">{bar.label}</span></div>)}</div> : <div className="mt-7 grid h-52 place-items-center border-b border-white/10 text-xs text-slate-600">Run an analysis to populate this chart.</div>}</div><div className="rounded-2xl border border-white/10 bg-[#101318] p-5"><div className="flex items-center justify-between"><div><h2 className="text-sm font-medium">NDVI Values Comparison</h2><p className="mt-1 text-xs text-slate-600">Mean readings across valid AOI pixels.</p></div><Leaf className="h-4 w-4 text-blue-400" /></div>{metrics ? <div className="mt-7 flex h-52 items-end justify-center gap-10 border-b border-white/10 px-8"><div className="flex h-full w-20 items-end gap-2"><div className="w-1/2 rounded-t bg-slate-500" style={{ height: `${Math.max(8, (metrics.ndvi_before_mean + 1) * 50)}%` }} /><div className="w-1/2 rounded-t bg-cyan-400" style={{ height: `${Math.max(8, (metrics.ndvi_after_mean + 1) * 50)}%` }} /></div></div> : <div className="mt-7 grid h-52 place-items-center border-b border-white/10 text-xs text-slate-600">Run an analysis to populate this chart.</div>}<div className="mt-3 flex justify-center gap-6 text-[10px] text-slate-600"><span>Before</span><span>After</span></div></div></div>{metrics ? <><div className="mt-4"><SignalMaskPreview masks={[{ name: "Vegetation", values: analysis.vegetation_change_mask, color: "#34d399" }, { name: "Water", values: analysis.water_change_mask, color: "#22d3ee" }, { name: "Built-surface", values: analysis.urban_change_mask, color: "#60a5fa" }]} /></div><div className="mt-4 grid gap-4 lg:grid-cols-2"><div className="rounded-2xl border border-white/10 bg-[#101318] p-5"><h2 className="text-sm font-medium">Detailed Change Statistics</h2><div className="mt-5 divide-y divide-white/10 text-xs"><div className="grid grid-cols-3 py-3 text-slate-600"><span>Change Type</span><span>Percentage</span><span>Valid Pixels</span></div>{[["Vegetation Change", format(metrics.vegetation_change), metrics.valid_pixels],["Urban Change", format(metrics.urban_change), metrics.valid_pixels],["Water Change", format(metrics.water_change), metrics.valid_pixels]].map(([name, value, pixels]) => <div key={String(name)} className="grid grid-cols-3 py-3 text-slate-300"><span>{name}</span><span>{value}</span><span>{pixels}</span></div>)}</div></div><div className="rounded-2xl border border-amber-400/20 bg-amber-400/[.03] p-5"><div className="flex items-center gap-2 text-sm font-medium"><AlertTriangle className="h-4 w-4 text-amber-400" /> Screening limitations</div><p className="mt-4 text-sm leading-6 text-slate-400">{analysis?.warnings.length ? analysis.warnings.join(" ") : "Satellite signals are heuristic. Review scene quality, seasonality, masks, and local evidence before making decisions."}</p><div className="mt-5"><Link href="/satellite" className="rounded-xl bg-white px-3 py-2 text-xs text-black">Inspect scenes</Link></div></div></div></> : null}<div className="mt-4"><AnalysisExports /></div></section></div>;
 }
