@@ -1,6 +1,6 @@
-# Garuda Lens
+# Earth Vision
 
-Garuda Lens is an open-source satellite land-use intelligence platform for comparing Sentinel-2 imagery across time. It combines a FastAPI geospatial backend with a Next.js operator console to help users draw an area of interest, select before/after date windows, detect vegetation, water, and urban change, and generate concise site-level advisory insights.
+Earth Vision is an open-source satellite land-use intelligence platform for comparing Sentinel-2 imagery across time. It combines a FastAPI geospatial backend with a Next.js operator console to help users draw an area of interest, select before/after date windows, detect vegetation, water, and urban change, and generate concise site-level advisory insights.
 
 The project is designed for environmental screening, planning workflows, agricultural assessment, site-selection research, and academic geospatial experimentation. It should be treated as a decision-support tool, not as a replacement for field surveys, certified remote-sensing analysis, or legal due diligence.
 
@@ -19,7 +19,7 @@ The project is designed for environmental screening, planning workflows, agricul
 ## Architecture
 
 ```text
-Garuda Lens
+Earth Vision
 |-- backend
 |   |-- FastAPI application and API routes
 |   |-- STAC scene search against Microsoft Planetary Computer
@@ -74,7 +74,7 @@ Backend variables:
 
 | Variable | Purpose | Default |
 | --- | --- | --- |
-| `APP_NAME` | API display name | `Garuda Lens API` |
+| `APP_NAME` | API display name | `Earth Vision API` |
 | `APP_ENV` | Runtime environment label | `development` |
 | `APP_HOST` | Backend bind host | `0.0.0.0` |
 | `APP_PORT` | Backend port | `8000` |
