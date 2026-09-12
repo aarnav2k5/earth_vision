@@ -56,7 +56,6 @@ export function MapWorkbench() {
   const [mapCenter, setMapCenter] = useState<[number, number]>([20.5937, 78.9629]);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
-
   const thresholdSensitive = thresholds.vegetation < 0.05 || thresholds.water < 0.05 || thresholds.urban_brightness > 100;
   const clearProposal = () => { setProposal(null); setConfirmed(false); setThresholdsAcknowledged(false); setError(null); };
   const updateBefore = (value: DateRange) => { setBefore(value); clearProposal(); };
@@ -155,7 +154,7 @@ export function MapWorkbench() {
 
   return (
     <div className="flex min-h-[calc(100vh-72px)] flex-col lg:flex-row">
-      <WorkspaceChatRail />
+      <WorkspaceChatRail key={prompt} initialMessage={prompt} />
       <section className="relative min-w-0 flex-1 bg-[#0b0e12] p-4 lg:p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
           <div><p className="text-xs uppercase tracking-[.2em] text-slate-600">Interactive mapping</p><h1 className="mt-1 text-xl font-semibold">Satellite change detection map</h1></div>

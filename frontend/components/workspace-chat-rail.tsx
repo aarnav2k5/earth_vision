@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
 
-export function WorkspaceChatRail({ compact = false }: { compact?: boolean }) {
-  const [message, setMessage] = useState("analyze new building development near 'infosys pune'");
+const DEFAULT_MESSAGE = "analyze new building development near 'infosys pune'";
+
+export function WorkspaceChatRail({ compact = false, initialMessage }: { compact?: boolean; initialMessage?: string }) {
+  const [message, setMessage] = useState(initialMessage?.trim() || DEFAULT_MESSAGE);
   const [feedback, setFeedback] = useState("");
   const router = useRouter();
   const submitMessage = () => {
