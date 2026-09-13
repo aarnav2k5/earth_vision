@@ -35,6 +35,8 @@ export type ChangeMetrics = {
   ndwi_delta: number;
   valid_coverage_percent: number;
   area_hectares: number;
+  opencv_change_percent: number;
+  opencv_change_regions: number;
 };
 
 export type AnalyzeResponse = {
@@ -54,6 +56,8 @@ export type AnalyzeResponse = {
   vegetation_change_mask: number[][];
   water_change_mask: number[][];
   urban_change_mask: number[][];
+  opencv_change_mask: number[][];
+  change_contours: number[][][];
 };
 
 export type FetchSentinelResponse = {
@@ -83,6 +87,11 @@ export type AiInsightPayload = {
   after_acquired: string;
   before_cloud_cover: number;
   after_cloud_cover: number;
+  before_scene_id?: string;
+  after_scene_id?: string;
+  processing_version?: string;
+  opencv_change_percent: number;
+  opencv_change_regions: number;
   thresholds: AnalysisThresholds;
   question?: string;
   recommendations?: string[];
@@ -120,5 +129,7 @@ export type AnalysisManifest = {
     vegetation: number[][];
     water: number[][];
     urban: number[][];
+    opencv: number[][];
   };
+  change_contours: number[][][];
 };

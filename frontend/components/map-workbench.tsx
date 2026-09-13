@@ -164,7 +164,8 @@ export function MapWorkbench() {
         before_cloud_cover: result.before_cloud_cover, after_cloud_cover: result.after_cloud_cover,
         metrics: result.metrics, warnings: result.warnings, recommendations: result.recommendations,
         thresholds: result.thresholds,
-        masks: { vegetation: result.vegetation_change_mask, water: result.water_change_mask, urban: result.urban_change_mask },
+        masks: { vegetation: result.vegetation_change_mask, water: result.water_change_mask, urban: result.urban_change_mask, opencv: result.opencv_change_mask },
+        change_contours: result.change_contours,
       });
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Analysis failed.");

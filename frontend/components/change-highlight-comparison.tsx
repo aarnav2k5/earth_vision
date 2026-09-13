@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Eye, EyeOff, Layers3 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,9 +17,8 @@ function drawContain(context: CanvasRenderingContext2D, image: HTMLImageElement,
   return { left, top, width: imageWidth, height: imageHeight };
 }
 
-export function ChangeHighlightComparison({ beforeUrl, afterUrl, masks }: { beforeUrl: string; afterUrl: string; masks: Mask[] }) {
+export function ChangeHighlightComparison({ afterUrl, masks, contours }: { afterUrl: string; masks: Mask[]; contours: number[][][] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [splitPosition, setSplitPosition] = useState(50);
   const [highlightsEnabled, setHighlightsEnabled] = useState(true);
   const [activeSignals, setActiveSignals] = useState(() => new Set(masks.map((mask) => mask.name)));
 
@@ -29,10 +28,9 @@ export function ChangeHighlightComparison({ beforeUrl, afterUrl, masks }: { befo
     if (!canvas) return;
     const context = canvas.getContext("2d");
     if (!context) return;
-    const before = new Image();
-    const after = new Image();
+    const image = new Image();
     const render = () => {
-      if (cancelled || !before.complete || !after.complete || !before.naturalWidth || !after.naturalWidth) return;
+      if (cancelled || !image.complete || !image.naturalWidth) return;
       const bounds = canvas.getBoundingClientRect();
       const pixelRatio = window.devicePixelRatio || 1;
       canvas.width = Math.max(1, Math.round(bounds.width * pixelRatio));
@@ -41,13 +39,7 @@ export function ChangeHighlightComparison({ beforeUrl, afterUrl, masks }: { befo
       context.clearRect(0, 0, bounds.width, bounds.height);
       context.fillStyle = "#0f1720";
       context.fillRect(0, 0, bounds.width, bounds.height);
-      const imageBounds = drawContain(context, after, bounds.width, bounds.height);
-      context.save();
-      context.beginPath();
-      context.rect(imageBounds.left, imageBounds.top, imageBounds.width * splitPosition / 100, imageBounds.height);
-      context.clip();
-      drawContain(context, before, bounds.width, bounds.height);
-      context.restore();
+      const imageBounds = drawContain(context, image, bounds.width, bounds.height);
 
       if (highlightsEnabled) {
         const rows = masks[0]?.values.length ?? 0;
@@ -63,31 +55,26 @@ export function ChangeHighlightComparison({ beforeUrl, afterUrl, masks }: { befo
             }));
           });
         }
+        context.strokeStyle = "#fef08a";
+        context.lineWidth = 2;
+        contours.forEach((contour) => {
+          if (!contour.length) return;
+          context.beginPath();
+          contour.forEach(([x, y], index) => {
+            const screenX = imageBounds.left + x * imageBounds.width;
+            const screenY = imageBounds.top + y * imageBounds.height;
+            if (index === 0) context.moveTo(screenX, screenY); else context.lineTo(screenX, screenY);
+          });
+          context.closePath();
+          context.stroke();
+        });
       }
-
-      const dividerX = imageBounds.left + imageBounds.width * splitPosition / 100;
-      context.fillStyle = "rgba(255,255,255,.95)";
-      context.fillRect(dividerX - 1, imageBounds.top, 2, imageBounds.height);
-      context.beginPath();
-      context.arc(dividerX, imageBounds.top + imageBounds.height / 2, 12, 0, Math.PI * 2);
-      context.fillStyle = "rgba(15,23,32,.9)";
-      context.fill();
-      context.strokeStyle = "rgba(255,255,255,.95)";
-      context.lineWidth = 2;
-      context.stroke();
-      context.fillStyle = "rgba(255,255,255,.95)";
-      context.font = "bold 12px Arial";
-      context.textAlign = "center";
-      context.textBaseline = "middle";
-      context.fillText("↔", dividerX, imageBounds.top + imageBounds.height / 2);
     };
-    before.onload = render;
-    after.onload = render;
-    before.src = beforeUrl;
-    after.src = afterUrl;
+    image.onload = render;
+    image.src = afterUrl;
     window.addEventListener("resize", render);
     return () => { cancelled = true; window.removeEventListener("resize", render); };
-  }, [afterUrl, beforeUrl, masks, splitPosition, highlightsEnabled, activeSignals]);
+  }, [afterUrl, masks, contours, highlightsEnabled, activeSignals]);
 
   const toggleSignal = (name: string) => setActiveSignals((current) => {
     const next = new Set(current);
@@ -95,21 +82,10 @@ export function ChangeHighlightComparison({ beforeUrl, afterUrl, masks }: { befo
     return next;
   });
 
-  const updateSplitFromPointer = (event: PointerEvent<HTMLCanvasElement>) => {
-    const bounds = event.currentTarget.getBoundingClientRect();
-    const next = ((event.clientX - bounds.left) / bounds.width) * 100;
-    setSplitPosition(Math.min(100, Math.max(0, next)));
-  };
-
   return <Card>
-    <CardHeader><div><CardTitle>Change highlights</CardTitle><CardDescription>Detected pixels are projected over the after scene. Move the slider to compare before and after while keeping the change locations visible.</CardDescription></div></CardHeader>
+    <CardHeader><div><CardTitle>Detected change highlights</CardTitle><CardDescription>OpenCV compares the aligned before and after scenes, then overlays detected pixels and yellow region contours on the after image. Toggle each signal to inspect the evidence.</CardDescription></div></CardHeader>
     <CardContent className="space-y-4">
-      <div className="relative overflow-hidden rounded-[24px] border border-border bg-[#0f1720]">
-        <canvas ref={canvasRef} onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); updateSplitFromPointer(event); }} onPointerMove={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) updateSplitFromPointer(event); }} className="block h-[460px] w-full cursor-col-resize touch-none" aria-label="Before and after satellite comparison with detected change highlights" />
-        <span className="pointer-events-none absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-foreground">Before {Math.round(splitPosition)}%</span>
-        <span className="pointer-events-none absolute right-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-foreground">After</span>
-      </div>
-      <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-muted">Comparison slider<input aria-label="Before and after comparison position" type="range" min={0} max={100} value={splitPosition} onChange={(event) => setSplitPosition(Number(event.target.value))} className="mt-3 w-full accent-primary" /></label>
+      <div className="relative overflow-hidden rounded-[24px] border border-border bg-[#0f1720]"><canvas ref={canvasRef} className="block h-[460px] w-full" aria-label="After satellite image with OpenCV detected change highlights" /><span className="pointer-events-none absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-foreground">After scene · highlighted changes</span></div>
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" onClick={() => setHighlightsEnabled((enabled) => !enabled)} className="inline-flex items-center gap-2 rounded-full border border-border bg-white/70 px-3 py-2 text-xs text-foreground"><Layers3 className="h-3.5 w-3.5" /> {highlightsEnabled ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />} {highlightsEnabled ? "Hide highlights" : "Show highlights"}</button>
         {masks.map((mask) => <button key={mask.name} type="button" onClick={() => toggleSignal(mask.name)} className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs ${activeSignals.has(mask.name) && highlightsEnabled ? "border-border bg-white text-foreground" : "border-border bg-transparent text-muted"}`}><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: mask.color }} />{mask.name}</button>)}

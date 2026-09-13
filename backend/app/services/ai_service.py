@@ -37,6 +37,10 @@ Use only these metrics as evidence:
 - Approximate AOI area: {payload.area_hectares} hectares
 - Before scene date: {payload.before_acquired}; cloud cover: {payload.before_cloud_cover}%
 - After scene date: {payload.after_acquired}; cloud cover: {payload.after_cloud_cover}%
+- Before scene ID: {payload.before_scene_id}
+- After scene ID: {payload.after_scene_id}
+- Processing version: {payload.processing_version}
+- OpenCV image difference: {payload.opencv_change_percent}% of valid pixels across {payload.opencv_change_regions} detected regions
 - Detection thresholds: vegetation {payload.thresholds.vegetation}, water {payload.thresholds.water}, urban brightness {payload.thresholds.urban_brightness}
 - Deterministic recommendations: {payload.recommendations}
 - Warnings: {payload.warnings}

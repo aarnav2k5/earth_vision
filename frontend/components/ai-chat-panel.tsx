@@ -45,6 +45,11 @@ export function AiChatPanel() {
         after_acquired: analysis.after_acquired,
         before_cloud_cover: analysis.before_cloud_cover,
         after_cloud_cover: analysis.after_cloud_cover,
+        before_scene_id: analysis.before_scene_id,
+        after_scene_id: analysis.after_scene_id,
+        processing_version: analysis.processing_version,
+        opencv_change_percent: analysis.metrics.opencv_change_percent,
+        opencv_change_regions: analysis.metrics.opencv_change_regions,
         thresholds: analysis.thresholds,
         question,
         recommendations: analysis.recommendations,
@@ -85,7 +90,7 @@ export function AiChatPanel() {
         </Button>
         {analysis ? <details className="rounded-2xl border border-border bg-white/60 p-3 text-xs text-muted">
           <summary className="cursor-pointer font-medium text-foreground">What is sent to Groq?</summary>
-          <p className="mt-2 leading-5">Only this typed follow-up question and the latest server-generated analysis context are sent: before/after NDVI and NDWI means/deltas, vegetation/urban/water change percentages, change intensity, valid AOI coverage, approximate area, scene acquisition dates, cloud cover, thresholds, deterministic recommendations, and warnings. Images, masks, AOI geometry, and scene URLs are not sent.</p>
+          <p className="mt-2 leading-5">Only this typed follow-up question and the latest server-generated analysis context are sent: scene IDs and processing version, before/after acquisition dates and cloud cover, before/after NDVI and NDWI means/deltas, vegetation/urban/water percentages, OpenCV image-difference coverage and region count, change intensity, valid AOI coverage, approximate area, thresholds, deterministic recommendations, and warnings. Raw image bytes, preview URLs, masks, and AOI geometry are not sent to the text model.</p>
         </details> : null}
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
         <div className="min-h-[240px] whitespace-pre-line rounded-[28px] border border-border bg-white/75 p-4 text-sm leading-7 text-foreground">

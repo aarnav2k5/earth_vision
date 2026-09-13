@@ -84,6 +84,8 @@ class ChangeMetrics(BaseModel):
     ndwi_delta: float
     valid_coverage_percent: float
     area_hectares: float
+    opencv_change_percent: float
+    opencv_change_regions: int
 
 
 class AnalyzeAreaResponse(BaseModel):
@@ -103,6 +105,8 @@ class AnalyzeAreaResponse(BaseModel):
     vegetation_change_mask: list[list[float]]
     water_change_mask: list[list[float]]
     urban_change_mask: list[list[float]]
+    opencv_change_mask: list[list[float]]
+    change_contours: list[list[list[float]]]
 
 
 class AiInsightInput(BaseModel):
@@ -123,6 +127,11 @@ class AiInsightInput(BaseModel):
     after_acquired: str
     before_cloud_cover: float
     after_cloud_cover: float
+    before_scene_id: str | None = None
+    after_scene_id: str | None = None
+    processing_version: str | None = None
+    opencv_change_percent: float
+    opencv_change_regions: int
     thresholds: AnalysisThresholds
     question: str | None = None
     recommendations: list[str] = Field(default_factory=list)

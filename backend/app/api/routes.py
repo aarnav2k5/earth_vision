@@ -137,7 +137,7 @@ def _analyze(request: AreaRequest) -> AnalyzeAreaResponse:
             }
         )
 
-    metrics, overlays = compute_change_metrics(
+    metrics, overlays, change_contours = compute_change_metrics(
         ndvi_before=ndvi_before,
         ndvi_after=ndvi_after,
         ndwi_before=ndwi_before,
@@ -195,6 +195,8 @@ def _analyze(request: AreaRequest) -> AnalyzeAreaResponse:
         vegetation_change_mask=overlays["vegetation"].round(4).tolist(),
         water_change_mask=overlays["water"].round(4).tolist(),
         urban_change_mask=overlays["urban"].round(2).tolist(),
+        opencv_change_mask=overlays["opencv"].round(2).tolist(),
+        change_contours=change_contours,
     )
 
 

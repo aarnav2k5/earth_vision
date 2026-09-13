@@ -40,7 +40,7 @@ def compute_change_metrics(
     water_threshold: float = 0.12,
     urban_brightness_threshold: float = 25.0,
     area_hectares: float | None = None,
-) -> tuple[ChangeMetrics, dict[str, np.ndarray]]:
+) -> tuple[ChangeMetrics, dict[str, np.ndarray], list[list[list[float]]]]:
     ndvi_diff = np.nan_to_num(ndvi_after - ndvi_before, nan=0.0)
     ndwi_diff = np.nan_to_num(ndwi_after - ndwi_before, nan=0.0)
 
@@ -59,9 +59,34 @@ def compute_change_metrics(
         ((brightness_delta >= urban_brightness_threshold) | (white_after & ~white_before)) & valid_mask
     )
 
-    combined_mask = veg_change_mask | water_change_mask | urban_change_mask
+    # A separate image-space signal highlights spatial differences visible in
+    # the aligned before/after RGB scenes. This is intentionally OpenCV-based
+    # and remains a screening signal rather than semantic object detection.
+    image_difference = cv2.absdiff(rgb_before_f.astype(np.uint8), rgb_after_f.astype(np.uint8))
+    difference_gray = cv2.cvtColor(image_difference, cv2.COLOR_RGB2GRAY)
+    difference_gray = cv2.GaussianBlur(difference_gray, (3, 3), 0)
+    opencv_change_mask = (difference_gray >= 20) & valid_mask
+    morphology_kernel = np.ones((3, 3), dtype=np.uint8)
+    opencv_change_mask = cv2.morphologyEx(opencv_change_mask.astype(np.uint8), cv2.MORPH_OPEN, morphology_kernel).astype(bool)
+    opencv_change_mask = cv2.morphologyEx(opencv_change_mask.astype(np.uint8), cv2.MORPH_CLOSE, morphology_kernel).astype(bool)
     valid_pixels = int(np.count_nonzero(valid_mask))
+    component_count, _, component_stats, _ = cv2.connectedComponentsWithStats(opencv_change_mask.astype(np.uint8), 8)
+    minimum_region_pixels = max(4, int(valid_pixels * 0.0001))
+    opencv_change_regions = int(sum(1 for index in range(1, component_count) if component_stats[index, cv2.CC_STAT_AREA] >= minimum_region_pixels))
+    contours, _ = cv2.findContours(opencv_change_mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    change_contours: list[list[list[float]]] = []
+    height, width = opencv_change_mask.shape
+    for contour in contours:
+        if cv2.contourArea(contour) < minimum_region_pixels:
+            continue
+        perimeter = cv2.arcLength(contour, True)
+        simplified = cv2.approxPolyDP(contour, max(1.0, 0.02 * perimeter), True)
+        change_contours.append([
+            [round(float(point[0][0] / max(1, width - 1)), 5), round(float(point[0][1] / max(1, height - 1)), 5)]
+            for point in simplified
+        ])
 
+    combined_mask = veg_change_mask | water_change_mask | urban_change_mask | opencv_change_mask
     def ratio(mask: np.ndarray) -> float:
         if valid_pixels == 0:
             return 0.0
@@ -88,11 +113,14 @@ def compute_change_metrics(
         ndwi_delta=round(float(np.mean(ndwi_after[valid_mask] - ndwi_before[valid_mask])) if valid_pixels else 0.0, 4),
         valid_coverage_percent=0.0,
         area_hectares=round(area_hectares if area_hectares is not None else valid_pixels * 0.01, 2),
+        opencv_change_percent=round(ratio(opencv_change_mask), 2),
+        opencv_change_regions=opencv_change_regions,
     )
 
     overlays = {
         "vegetation": np.where(veg_change_mask, np.abs(ndvi_diff), 0.0),
         "water": np.where(water_change_mask, np.abs(ndwi_diff), 0.0),
         "urban": np.where(urban_change_mask, brightness_delta.clip(min=0.0), 0.0),
+        "opencv": np.where(opencv_change_mask, difference_gray, 0.0),
     }
-    return metrics, overlays
+    return metrics, overlays, change_contours
