@@ -107,10 +107,23 @@ class AnalyzeAreaResponse(BaseModel):
 
 class AiInsightInput(BaseModel):
     NDVI_mean: float
+    ndvi_before_mean: float
+    ndvi_after_mean: float
+    ndvi_delta: float
+    ndwi_before_mean: float
+    ndwi_after_mean: float
+    ndwi_delta: float
     vegetation_change: float
     urban_change: float
     water_change: float
     change_intensity: float
+    valid_coverage_percent: float
+    area_hectares: float
+    before_acquired: str
+    after_acquired: str
+    before_cloud_cover: float
+    after_cloud_cover: float
+    thresholds: AnalysisThresholds
     question: str | None = None
     recommendations: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)

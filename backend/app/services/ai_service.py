@@ -22,11 +22,22 @@ class GroqInsightService:
 You are answering a site-specific land-use question for a user.
 
 Use only these metrics as evidence:
-- NDVI mean: {payload.NDVI_mean}
+- NDVI before mean: {payload.ndvi_before_mean}
+- NDVI after mean: {payload.ndvi_after_mean}
+- NDVI delta: {payload.ndvi_delta}
+- NDWI before mean: {payload.ndwi_before_mean}
+- NDWI after mean: {payload.ndwi_after_mean}
+- NDWI delta: {payload.ndwi_delta}
+- Latest NDVI mean: {payload.NDVI_mean}
 - Vegetation change: {payload.vegetation_change}%
 - Urban change: {payload.urban_change}%
 - Water change: {payload.water_change}%
 - Change intensity: {payload.change_intensity}
+- Valid AOI coverage: {payload.valid_coverage_percent}%
+- Approximate AOI area: {payload.area_hectares} hectares
+- Before scene date: {payload.before_acquired}; cloud cover: {payload.before_cloud_cover}%
+- After scene date: {payload.after_acquired}; cloud cover: {payload.after_cloud_cover}%
+- Detection thresholds: vegetation {payload.thresholds.vegetation}, water {payload.thresholds.water}, urban brightness {payload.thresholds.urban_brightness}
 - Deterministic recommendations: {payload.recommendations}
 - Warnings: {payload.warnings}
 

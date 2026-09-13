@@ -67,10 +67,23 @@ export type FetchSentinelResponse = {
 
 export type AiInsightPayload = {
   NDVI_mean: number;
+  ndvi_before_mean: number;
+  ndvi_after_mean: number;
+  ndvi_delta: number;
+  ndwi_before_mean: number;
+  ndwi_after_mean: number;
+  ndwi_delta: number;
   vegetation_change: number;
   urban_change: number;
   water_change: number;
   change_intensity: number;
+  valid_coverage_percent: number;
+  area_hectares: number;
+  before_acquired: string;
+  after_acquired: string;
+  before_cloud_cover: number;
+  after_cloud_cover: number;
+  thresholds: AnalysisThresholds;
   question?: string;
   recommendations?: string[];
   warnings?: string[];
