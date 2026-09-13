@@ -13,6 +13,24 @@ class GroqInsightService:
         self.enabled = bool(configured_key and configured_key != "your_groq_api_key_here")
         self.api_key = configured_key
 
+    @staticmethod
+    def _ensure_actionable_format(answer: str, question: str) -> str:
+        """Keep model responses decisive even when the provider ignores formatting."""
+        normalized = answer.lower()
+        has_decision_heading = any(marker in normalized for marker in ("conclusion:", "verdict:", "decision:"))
+        has_explicit_decision = any(marker in normalized for marker in ("yes", "no", "conditional"))
+        if has_decision_heading and has_explicit_decision:
+            return answer.strip()
+        question_is_decision = any(
+            term in question.lower()
+            for term in ("should i", "buy a house", "buy property", "profitable", "should we", "is it safe")
+        )
+        if question_is_decision:
+            conclusion = "No — this satellite screening alone is not sufficient evidence to recommend that decision."
+        else:
+            conclusion = "The available satellite evidence supports targeted follow-up, not a definitive decision."
+        return f"Conclusion: {conclusion}\n\nReasoning:\n{answer.strip()}"
+
     async def generate_insight(self, payload: AiInsightInput) -> str:
         if not self.enabled:
             return "Groq API key is not configured. Add GROQ_API_KEY to backend/.env to enable AI insights."
@@ -50,22 +68,28 @@ User question:
 
 Instructions:
 - Explain only the supplied metrics, deterministic recommendations, and warnings.
-- If the user asks for suitability, legality, profitability, causation, or professional advice, state that these cannot be determined from this screening analysis.
+- Always start with exactly one explicit decision line: `Conclusion: Yes`, `Conclusion: No`, or `Conclusion: Conditional`.
+- If the user asks whether to buy a house, whether farming is profitable, or any other suitability/profitability question, do not answer with a vague refusal. Give `Conclusion: No — insufficient evidence to recommend this decision from satellite screening alone`, then explain the metric-based reasons and the additional evidence required.
+- If the supplied metrics support a lower-risk interpretation, use `Conclusion: Conditional` and state the conditions that must be verified; never present it as approval, safety, legality, or guaranteed profitability.
+- If the user asks about legality, causation, or professional advice, clearly say that this screening cannot establish it while still giving the most useful metric-based conclusion.
 - Do not introduce new recommendations, facts, causes, or independent image interpretations.
 - Do not introduce unrelated topics, trivia, politics, or facts outside the site analysis.
 - If warnings are present, include the relevant limitation in one short sentence.
 - Keep the response concise, practical, and grounded in the supplied values.
 
 Preferred format:
-- Verdict: one short answer
-- Why: 2 to 4 bullet points tied to the metrics
-- Caution: one short sentence
+- Conclusion: Yes / No / Conditional — one direct answer
+- Reasoning: 2 to 4 bullet points tied to exact supplied metrics
+- Recommendation: practical next checks based only on the supplied warnings and deterministic recommendations
+- Limitation: one short sentence explaining what satellite screening cannot prove
 """.strip()
 
         instructions = (
             "You are a careful geospatial land-use analyst. "
             "Answer only using the supplied metrics, recommendations, and warnings. "
-            "Never add unrelated information or make professional, legal, causal, or suitability claims."
+            "Always provide a clearly labeled Conclusion, Reasoning, Recommendation, and Limitation. "
+            "Never leave the user with an unqualified or unexplained answer. "
+            "Never add unrelated information or make professional, legal, causal, safety, or profitability guarantees."
         )
 
         if not self.api_key:
@@ -96,7 +120,7 @@ Preferred format:
             return f"Groq request failed: {exc}"
 
         answer = response.get("choices", [{}])[0].get("message", {}).get("content")
-        return (answer or "No AI insight was returned.").strip()
+        return self._ensure_actionable_format(answer or "No AI insight was returned.", user_question)
 
     def _request_groq(self, instructions: str, prompt: str) -> dict:
         response = requests.post(
