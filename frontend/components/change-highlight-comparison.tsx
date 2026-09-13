@@ -17,7 +17,7 @@ function drawContain(context: CanvasRenderingContext2D, image: HTMLImageElement,
   return { left, top, width: imageWidth, height: imageHeight };
 }
 
-export function ChangeHighlightComparison({ afterUrl, masks, contours }: { afterUrl: string; masks: Mask[]; contours: number[][][] }) {
+export function ChangeHighlightComparison({ afterUrl, masks, contours = [] }: { afterUrl: string; masks: Mask[]; contours?: number[][][] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [highlightsEnabled, setHighlightsEnabled] = useState(true);
   const [activeSignals, setActiveSignals] = useState(() => new Set(masks.map((mask) => mask.name)));
@@ -85,10 +85,10 @@ export function ChangeHighlightComparison({ afterUrl, masks, contours }: { after
   return <Card>
     <CardHeader><div><CardTitle>Detected change highlights</CardTitle><CardDescription>OpenCV compares the aligned before and after scenes, then overlays detected pixels and yellow region contours on the after image. Toggle each signal to inspect the evidence.</CardDescription></div></CardHeader>
     <CardContent className="space-y-4">
-      <div className="relative overflow-hidden rounded-[24px] border border-border bg-[#0f1720]"><canvas ref={canvasRef} className="block h-[460px] w-full" aria-label="After satellite image with OpenCV detected change highlights" /><span className="pointer-events-none absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-foreground">After scene · highlighted changes</span></div>
+      <div className="relative overflow-hidden rounded-[24px] border border-border bg-[#0f1720]"><canvas ref={canvasRef} className="block h-[460px] w-full" aria-label="After satellite image with OpenCV detected change highlights" /><span className="pointer-events-none absolute left-3 top-3 rounded-full border border-white/20 bg-[#111827]/95 px-3 py-1 text-xs font-semibold text-white">After scene · highlighted changes</span></div>
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" onClick={() => setHighlightsEnabled((enabled) => !enabled)} className="inline-flex items-center gap-2 rounded-full border border-border bg-white/70 px-3 py-2 text-xs text-foreground"><Layers3 className="h-3.5 w-3.5" /> {highlightsEnabled ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />} {highlightsEnabled ? "Hide highlights" : "Show highlights"}</button>
-        {masks.map((mask) => <button key={mask.name} type="button" onClick={() => toggleSignal(mask.name)} className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs ${activeSignals.has(mask.name) && highlightsEnabled ? "border-border bg-white text-foreground" : "border-border bg-transparent text-muted"}`}><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: mask.color }} />{mask.name}</button>)}
+        <button type="button" onClick={() => setHighlightsEnabled((enabled) => !enabled)} className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-[#172131] px-3 py-2 text-xs font-medium text-slate-100 hover:bg-[#233149]"><Layers3 className="h-3.5 w-3.5" /> {highlightsEnabled ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />} {highlightsEnabled ? "Hide highlights" : "Show highlights"}</button>
+        {masks.map((mask) => <button key={mask.name} type="button" onClick={() => toggleSignal(mask.name)} className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-medium transition ${activeSignals.has(mask.name) && highlightsEnabled ? "border-blue-300/60 bg-blue-400/20 text-blue-100" : "border-white/15 bg-[#121923] text-slate-300 hover:bg-[#1c2735]"}`}><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: mask.color }} />{mask.name}</button>)}
       </div>
     </CardContent>
   </Card>;

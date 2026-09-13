@@ -78,7 +78,7 @@ export function AiChatPanel() {
               key={item}
               type="button"
               onClick={() => setQuestion(item)}
-              className="rounded-full border border-border bg-white/70 px-3 py-1 text-sm text-foreground hover:bg-white"
+              className="rounded-full border border-white/15 bg-[#172131] px-3 py-2 text-sm text-slate-100 hover:bg-[#233149]"
             >
               {item}
             </button>
@@ -88,12 +88,12 @@ export function AiChatPanel() {
         <Button onClick={handleSubmit} disabled={loading}>
           {loading ? "Thinking..." : "Generate insight"}
         </Button>
-        {analysis ? <details className="rounded-2xl border border-border bg-white/60 p-3 text-xs text-muted">
-          <summary className="cursor-pointer font-medium text-foreground">What is sent to Groq?</summary>
-          <p className="mt-2 leading-5">Only this typed follow-up question and the latest server-generated analysis context are sent: scene IDs and processing version, before/after acquisition dates and cloud cover, before/after NDVI and NDWI means/deltas, vegetation/urban/water percentages, OpenCV image-difference coverage and region count, change intensity, valid AOI coverage, approximate area, thresholds, deterministic recommendations, and warnings. Raw image bytes, preview URLs, masks, and AOI geometry are not sent to the text model.</p>
+        {analysis ? <details className="rounded-2xl border border-white/15 bg-[#121923] p-3 text-xs text-slate-200">
+          <summary className="cursor-pointer font-medium text-white">What is sent to Groq?</summary>
+          <p className="mt-2 leading-5 text-slate-300">Only this typed follow-up question and the latest server-generated analysis context are sent: scene IDs and processing version, before/after acquisition dates and cloud cover, before/after NDVI and NDWI means/deltas, vegetation/urban/water percentages, OpenCV image-difference coverage and region count, change intensity, valid AOI coverage, approximate area, thresholds, deterministic recommendations, and warnings. Raw image bytes, preview URLs, masks, and AOI geometry are not sent to the text model.</p>
         </details> : null}
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
-        <div className="min-h-[240px] whitespace-pre-line rounded-[28px] border border-border bg-white/75 p-4 text-sm leading-7 text-foreground">
+        {error ? <p className="text-sm text-red-300">{error}</p> : null}
+        <div className="min-h-[240px] whitespace-pre-line rounded-[28px] border border-white/15 bg-[#121923] p-4 text-sm leading-7 text-slate-100">
           {answer || "Your AI assessment will appear here once a site has been analyzed."}
         </div>
       </CardContent>

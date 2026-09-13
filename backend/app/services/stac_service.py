@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import base64
 import logging
 from typing import Any
 from urllib.parse import parse_qs, urlparse
@@ -25,6 +26,17 @@ from app.core.config import settings
 
 _TOKEN_CACHE: dict[str, sas.SASToken] = {}
 logger = logging.getLogger(__name__)
+
+
+def _aoi_preview_data_url(rgb: np.ndarray) -> str:
+    """Encode only the AOI-clipped RGB array for the browser preview."""
+    values = np.nan_to_num(rgb, nan=0.0, posinf=0.0, neginf=0.0).astype(np.float32)
+    scale = 10000.0 if (values.size and float(values.max()) > 1.5) else 1.0
+    image = np.clip(values / scale * 255.0, 0, 255).astype(np.uint8)
+    success, encoded = cv2.imencode(".jpg", cv2.cvtColor(image, cv2.COLOR_RGB2BGR), [cv2.IMWRITE_JPEG_QUALITY, 88])
+    if not success:
+        raise ValueError("Unable to encode the AOI preview image.")
+    return f"data:image/jpeg;base64,{base64.b64encode(encoded.tobytes()).decode('ascii')}"
 
 
 def _sign_url_with_timeout(url: str) -> str:
@@ -199,7 +211,6 @@ class SentinelService:
         logger.info("%s: rgb preview in %.2fs", item.id, time.perf_counter() - rgb_started_at)
 
         valid_mask = (red > 0) & (green > 0) & (nir > 0)
-        preview_asset = item.assets.get("rendered_preview") or item.assets.get("visual")
         logger.info("%s: scene fetch complete in %.2fs", item.id, time.perf_counter() - started_at)
         return SceneData(
             item=item,
@@ -208,7 +219,7 @@ class SentinelService:
             nir=nir,
             rgb=rgb,
             valid_mask=valid_mask,
-            preview_url=_sign_url_with_timeout(preview_asset.href) if preview_asset else None,
+            preview_url=_aoi_preview_data_url(rgb),
             cloud_cover=float(item.properties.get("eo:cloud_cover", 100.0)),
             acquired=item.properties.get("datetime", ""),
         )
