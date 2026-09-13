@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { Eye, EyeOff, Layers3 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,7 +44,7 @@ export function ChangeHighlightComparison({ beforeUrl, afterUrl, masks }: { befo
       const imageBounds = drawContain(context, after, bounds.width, bounds.height);
       context.save();
       context.beginPath();
-      context.rect(0, 0, bounds.width * splitPosition / 100, bounds.height);
+      context.rect(imageBounds.left, imageBounds.top, imageBounds.width * splitPosition / 100, imageBounds.height);
       context.clip();
       drawContain(context, before, bounds.width, bounds.height);
       context.restore();
@@ -64,6 +64,22 @@ export function ChangeHighlightComparison({ beforeUrl, afterUrl, masks }: { befo
           });
         }
       }
+
+      const dividerX = imageBounds.left + imageBounds.width * splitPosition / 100;
+      context.fillStyle = "rgba(255,255,255,.95)";
+      context.fillRect(dividerX - 1, imageBounds.top, 2, imageBounds.height);
+      context.beginPath();
+      context.arc(dividerX, imageBounds.top + imageBounds.height / 2, 12, 0, Math.PI * 2);
+      context.fillStyle = "rgba(15,23,32,.9)";
+      context.fill();
+      context.strokeStyle = "rgba(255,255,255,.95)";
+      context.lineWidth = 2;
+      context.stroke();
+      context.fillStyle = "rgba(255,255,255,.95)";
+      context.font = "bold 12px Arial";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText("↔", dividerX, imageBounds.top + imageBounds.height / 2);
     };
     before.onload = render;
     after.onload = render;
@@ -79,14 +95,19 @@ export function ChangeHighlightComparison({ beforeUrl, afterUrl, masks }: { befo
     return next;
   });
 
+  const updateSplitFromPointer = (event: PointerEvent<HTMLCanvasElement>) => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const next = ((event.clientX - bounds.left) / bounds.width) * 100;
+    setSplitPosition(Math.min(100, Math.max(0, next)));
+  };
+
   return <Card>
     <CardHeader><div><CardTitle>Change highlights</CardTitle><CardDescription>Detected pixels are projected over the after scene. Move the slider to compare before and after while keeping the change locations visible.</CardDescription></div></CardHeader>
     <CardContent className="space-y-4">
       <div className="relative overflow-hidden rounded-[24px] border border-border bg-[#0f1720]">
-        <canvas ref={canvasRef} className="block h-[460px] w-full" aria-label="Before and after satellite comparison with detected change highlights" />
+        <canvas ref={canvasRef} onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); updateSplitFromPointer(event); }} onPointerMove={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) updateSplitFromPointer(event); }} className="block h-[460px] w-full cursor-col-resize touch-none" aria-label="Before and after satellite comparison with detected change highlights" />
         <span className="pointer-events-none absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-foreground">Before {Math.round(splitPosition)}%</span>
         <span className="pointer-events-none absolute right-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-foreground">After</span>
-        <div className="pointer-events-none absolute inset-y-0 z-10 w-1 bg-white shadow" style={{ left: `${splitPosition}%` }} />
       </div>
       <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-muted">Comparison slider<input aria-label="Before and after comparison position" type="range" min={0} max={100} value={splitPosition} onChange={(event) => setSplitPosition(Number(event.target.value))} className="mt-3 w-full accent-primary" /></label>
       <div className="flex flex-wrap items-center gap-2">

@@ -103,3 +103,14 @@ a {
 }
 
 .noise { background-image: radial-gradient(rgba(255,255,255,.06) .7px, transparent .7px); background-size: 5px 5px; }
+
+/* The dark workspace uses these muted classes extensively. Keep secondary copy
+   comfortably readable against the dark cards and map surfaces. */
+@layer utilities {
+  .text-slate-600 { color: #a8b4c5 !important; }
+  .text-slate-500 { color: #c2ccda !important; }
+  .text-slate-700 { color: #93a4b8 !important; }
+  .placeholder\:text-slate-600::placeholder { color: #93a4b8 !important; opacity: 1; }
+  .placeholder\:text-slate-700::placeholder { color: #93a4b8 !important; opacity: 1; }
+  .text-muted { color: #b5c0cf !important; }
+}
