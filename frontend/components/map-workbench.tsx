@@ -35,7 +35,6 @@ const MapViewport = dynamic<MapViewportProps>(async () => {
   return Viewport;
 }, { ssr: false });
 
-const DEFAULT_PROMPT = "analyze new building development near 'infosys pune'";
 const DEFAULT_CENTER: [number, number] = [20.5937, 78.9629];
 
 function extractLocationQuery(prompt: string) {
@@ -59,7 +58,7 @@ export function MapWorkbench() {
     setAoi, setBefore, setAfter, setCloudCover, setThresholds, setAnalysis, setManifest, setPrompt: setStoredPrompt,
     setSentinel, setLoading, setError, setSearchLabel,
   } = useGarudaStore();
-  const [prompt, setPrompt] = useState(() => searchParams.get("prompt") ?? storedPrompt ?? DEFAULT_PROMPT);
+  const [prompt, setPrompt] = useState(() => searchParams.get("prompt") ?? storedPrompt ?? "");
   const [proposal, setProposal] = useState<AnalysisProposal | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [thresholdsAcknowledged, setThresholdsAcknowledged] = useState(false);
@@ -220,14 +219,14 @@ export function MapWorkbench() {
           </MapContainer>
           <div className="pointer-events-none absolute left-4 top-4 z-[500] flex flex-wrap gap-2"><span className="rounded-xl border border-white/10 bg-black/70 px-3 py-2 text-xs text-slate-300"><Layers className="mr-2 inline h-3.5 w-3.5" /> Satellite map</span><span className="rounded-xl border border-white/10 bg-black/70 px-3 py-2 text-xs text-slate-300"><Crosshair className="mr-2 inline h-3.5 w-3.5" /> {aoi ? "AOI selected" : "Use polygon tool to select AOI"}</span></div>
           <div className="absolute bottom-4 left-4 right-4 z-[500] flex flex-wrap items-end justify-between gap-3">
-            <div className="rounded-2xl border border-white/10 bg-black/75 p-3 backdrop-blur-xl"><p className="mb-2 text-[10px] uppercase tracking-widest text-slate-500">Search location</p><div className="flex gap-2"><input value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void searchLocation(); }} placeholder="Infosys Pune" className="w-44 bg-transparent text-xs text-white outline-none placeholder:text-slate-600" /><button type="button" onClick={() => void searchLocation()} disabled={searching} className="rounded-lg bg-white px-3 py-2 text-xs text-black">{searching ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}</button></div>{searchLabel && searchLabel !== "Choose a place and draw an area of interest." ? <p className="mt-2 max-w-60 truncate text-[10px] text-emerald-300">{searchLabel}</p> : null}{searchError ? <p className="mt-2 max-w-52 text-[10px] text-red-300">{searchError}</p> : null}</div>
+            <div className="rounded-2xl border border-white/10 bg-black/75 p-3 backdrop-blur-xl"><p className="mb-2 text-[10px] uppercase tracking-widest text-slate-500">Search location</p><div className="flex gap-2"><input value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void searchLocation(); }} placeholder="Search a place" className="w-44 bg-transparent text-xs text-white outline-none placeholder:text-slate-600" aria-label="Search a place" /><button type="button" onClick={() => void searchLocation()} disabled={searching || !query.trim()} className="rounded-lg bg-white px-3 py-2 text-xs text-black disabled:cursor-not-allowed disabled:opacity-40" aria-label="Search location">{searching ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}</button></div>{searchLabel && searchLabel !== "Choose a place and draw an area of interest." ? <p className="mt-2 max-w-60 truncate text-[10px] text-emerald-300">{searchLabel}</p> : null}{searchError ? <p className="mt-2 max-w-52 text-[10px] text-red-300">{searchError}</p> : null}</div>
             <div className="flex items-center gap-2"><button type="button" onClick={clearArea} disabled={!aoi && !analysis} className="rounded-xl border border-white/10 bg-black/80 px-4 py-3 text-xs text-slate-200 disabled:cursor-not-allowed disabled:opacity-40">Clear area</button><span className="rounded-xl border border-blue-300/30 bg-blue-950/70 px-3 py-3 text-xs text-blue-100">{aoi ? "Review the proposal below" : "Draw a polygon to begin"}</span></div>
           </div>
         </div>
 
         <div className="mt-4 rounded-2xl border border-white/10 bg-[#101318] p-4">
           <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] uppercase tracking-widest text-slate-600">Analysis proposal</p><p className="mt-1 text-xs text-slate-500">Review the analysis window and thresholds before remote-sensing requests run.</p></div><span className="text-xs text-slate-500">{proposal ? "Ready for confirmation" : "Draw a polygon to generate"}</span></div>
-          <input value={prompt} onChange={(event) => { const value = event.target.value; setPrompt(value); setStoredPrompt(value); clearProposal(); }} className="mt-3 w-full bg-transparent text-sm text-slate-300 outline-none" aria-label="Analysis question" />
+          <input value={prompt} onChange={(event) => { const value = event.target.value; setPrompt(value); setStoredPrompt(value); clearProposal(); }} placeholder="Describe the place and change you want to analyze" className="mt-3 w-full bg-transparent text-sm text-slate-300 outline-none placeholder:text-slate-700" aria-label="Analysis question" />
           <p className="mt-2 text-xs text-slate-400">{proposal ? proposal.summary : "The proposal will include vegetation, water, and built-surface change signals."}</p>
           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <label className="text-xs text-slate-500">Before start<input type="date" value={before.start} onChange={(event) => updateBefore({ ...before, start: event.target.value })} className="mt-1 block w-full rounded-lg border border-white/10 bg-black/20 px-2 py-2 text-slate-200" /></label>

@@ -41,14 +41,18 @@ const clearDerivedResults = {
   error: null,
 };
 
+const currentYear = new Date().getFullYear();
+const defaultBefore = { start: `${currentYear - 2}-01-01`, end: `${currentYear - 2}-12-31` };
+const defaultAfter = { start: `${currentYear - 1}-01-01`, end: `${currentYear - 1}-12-31` };
+
 export const useGarudaStore = create<GarudaState>()(
   persist(
     (set) => ({
       aoi: null,
       prompt: "",
       searchLabel: "Choose a place and draw an area of interest.",
-      before: { start: "2023-01-01", end: "2023-06-30" },
-      after: { start: "2024-01-01", end: "2024-06-30" },
+      before: defaultBefore,
+      after: defaultAfter,
       cloudCover: 20,
       thresholds: { vegetation: 0.18, water: 0.12, urban_brightness: 25 },
       sentinel: null,
