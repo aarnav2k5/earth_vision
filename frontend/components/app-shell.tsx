@@ -32,7 +32,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
         <div className="flex w-[220px] items-center justify-end gap-4 text-xs text-slate-500">
           <span className="hidden items-center gap-2 sm:flex"><span className="h-2 w-2 rounded-full bg-emerald-400" /> NDVI data available</span>
-          <button type="button" aria-label="Dark theme active" title="Dark theme active" className="rounded-lg p-1 text-slate-500"><Moon className="h-4 w-4" /></button>
+          <span aria-label="Dark theme active" title="Dark theme active" className="rounded-lg p-1 text-slate-500"><Moon className="h-4 w-4" /></span>
         </div>
       </header>
       <main className="min-h-[calc(100vh-72px)]">{children}</main>

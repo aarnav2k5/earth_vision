@@ -6,8 +6,8 @@ import "leaflet-draw/dist/leaflet.draw.css";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ComponentType, type ReactNode, type Ref } from "react";
-import type { FeatureGroup as LeafletFeatureGroup } from "leaflet";
-import { AreaChart, Crosshair, Layers, LoaderCircle, Map as MapIcon, Search } from "lucide-react";
+import type { FeatureGroup as LeafletFeatureGroup, Layer as LeafletLayer } from "leaflet";
+import { AreaChart, Crosshair, Layers, LoaderCircle, Search } from "lucide-react";
 
 import { WorkspaceChatRail } from "@/components/workspace-chat-rail";
 import { analyzeArea } from "@/lib/api";
@@ -16,7 +16,7 @@ import { useGarudaStore } from "@/store/use-garuda-store";
 import type { AnalysisProposal, AnalysisThresholds, DateRange, GeoJsonGeometry } from "@/types/api";
 
 type MapContainerProps = { center: [number, number]; zoom: number; style?: CSSProperties; children?: ReactNode };
-type DrawLayer = { toGeoJSON: () => { geometry: GeoJsonGeometry } };
+type DrawLayer = LeafletLayer & { toGeoJSON: () => { geometry: GeoJsonGeometry } };
 type EditControlProps = { position?: string; onCreated?: (event: { layer: DrawLayer }) => void; onEdited?: (event: { layers: { eachLayer: (callback: (layer: DrawLayer) => void) => void } }) => void; onDeleted?: () => void; draw?: Record<string, unknown>; edit?: Record<string, unknown> };
 type FeatureGroupProps = { children?: ReactNode; ref?: Ref<LeafletFeatureGroup> };
 type MapViewportProps = { center: [number, number]; zoom: number };
@@ -68,6 +68,7 @@ export function MapWorkbench() {
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
   const featureGroupRef = useRef<LeafletFeatureGroup | null>(null);
+  const activeLayerRef = useRef<DrawLayer | null>(null);
   const thresholdSensitive = thresholds.vegetation < 0.05 || thresholds.water < 0.05 || thresholds.urban_brightness > 100;
   const clearProposal = () => { setProposal(null); setConfirmed(false); setThresholdsAcknowledged(false); setError(null); };
   const updateBefore = (value: DateRange) => { setBefore(value); clearProposal(); };
@@ -173,7 +174,10 @@ export function MapWorkbench() {
 
   const prepare = () => { if (!validateInputs()) return; setProposal(buildProposal()); setConfirmed(false); setError(null); };
   const handleAoiCreated = (event: { layer: DrawLayer }) => {
-    featureGroupRef.current?.clearLayers();
+    if (activeLayerRef.current && featureGroupRef.current) {
+      featureGroupRef.current.removeLayer(activeLayerRef.current);
+    }
+    activeLayerRef.current = event.layer;
     setAoi(event.layer.toGeoJSON().geometry);
     if (!validateInputs()) { setProposal(null); setConfirmed(false); return; }
     setProposal(buildProposal());
@@ -181,14 +185,21 @@ export function MapWorkbench() {
     setError(null);
   };
   const handleAoiEdited = (event: { layers: { eachLayer: (callback: (layer: DrawLayer) => void) => void } }) => {
-    event.layers.eachLayer((layer) => setAoi(layer.toGeoJSON().geometry));
+    event.layers.eachLayer((layer) => {
+      activeLayerRef.current = layer;
+      setAoi(layer.toGeoJSON().geometry);
+    });
     clearProposal();
   };
   const confirmProposal = () => { setConfirmed(true); void run(proposal, true); };
-  const handleAoiDeleted = () => clearArea();
-  const clearArea = () => { featureGroupRef.current?.clearLayers(); setAoi(null); setProposal(null); setConfirmed(false); setThresholdsAcknowledged(false); setError(null); };
+  const handleAoiDeleted = () => {
+    activeLayerRef.current = null;
+    clearArea();
+  };
+  const clearArea = () => { featureGroupRef.current?.clearLayers(); activeLayerRef.current = null; setAoi(null); setProposal(null); setConfirmed(false); setThresholdsAcknowledged(false); setError(null); };
   const handlePrimaryAction = () => {
-    if (!proposal) prepare();
+    if (!aoi) setError("Draw a polygon on the map first.");
+    else if (!proposal) prepare();
     else if (!confirmed && (!thresholdSensitive || thresholdsAcknowledged)) confirmProposal();
   };
 
@@ -210,7 +221,7 @@ export function MapWorkbench() {
           <div className="pointer-events-none absolute left-4 top-4 z-[500] flex flex-wrap gap-2"><span className="rounded-xl border border-white/10 bg-black/70 px-3 py-2 text-xs text-slate-300"><Layers className="mr-2 inline h-3.5 w-3.5" /> Satellite map</span><span className="rounded-xl border border-white/10 bg-black/70 px-3 py-2 text-xs text-slate-300"><Crosshair className="mr-2 inline h-3.5 w-3.5" /> {aoi ? "AOI selected" : "Use polygon tool to select AOI"}</span></div>
           <div className="absolute bottom-4 left-4 right-4 z-[500] flex flex-wrap items-end justify-between gap-3">
             <div className="rounded-2xl border border-white/10 bg-black/75 p-3 backdrop-blur-xl"><p className="mb-2 text-[10px] uppercase tracking-widest text-slate-500">Search location</p><div className="flex gap-2"><input value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void searchLocation(); }} placeholder="Infosys Pune" className="w-44 bg-transparent text-xs text-white outline-none placeholder:text-slate-600" /><button type="button" onClick={() => void searchLocation()} disabled={searching} className="rounded-lg bg-white px-3 py-2 text-xs text-black">{searching ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}</button></div>{searchLabel && searchLabel !== "Choose a place and draw an area of interest." ? <p className="mt-2 max-w-60 truncate text-[10px] text-emerald-300">{searchLabel}</p> : null}{searchError ? <p className="mt-2 max-w-52 text-[10px] text-red-300">{searchError}</p> : null}</div>
-            <div className="flex gap-2"><button type="button" onClick={clearArea} disabled={!aoi && !analysis} className="rounded-xl border border-white/10 bg-black/80 px-4 py-3 text-xs text-slate-200 disabled:cursor-not-allowed disabled:opacity-40">Clear area</button><button type="button" onClick={handlePrimaryAction} disabled={loading || confirmed || (thresholdSensitive && !thresholdsAcknowledged)} className="rounded-xl bg-white px-4 py-3 text-xs font-medium text-black disabled:cursor-not-allowed disabled:opacity-50">{loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <><MapIcon className="mr-2 inline h-3.5 w-3.5" />{proposal ? "Confirm & run" : "Prepare analysis"}</>}</button></div>
+            <div className="flex items-center gap-2"><button type="button" onClick={clearArea} disabled={!aoi && !analysis} className="rounded-xl border border-white/10 bg-black/80 px-4 py-3 text-xs text-slate-200 disabled:cursor-not-allowed disabled:opacity-40">Clear area</button><span className="rounded-xl border border-blue-300/30 bg-blue-950/70 px-3 py-3 text-xs text-blue-100">{aoi ? "Review the proposal below" : "Draw a polygon to begin"}</span></div>
           </div>
         </div>
 
@@ -231,7 +242,7 @@ export function MapWorkbench() {
             <label className="text-xs text-slate-500">Urban brightness threshold<input type="number" min="1" max="255" step="1" value={thresholds.urban_brightness} onChange={(event) => updateThresholds({ ...thresholds, urban_brightness: Number(event.target.value) })} className="mt-1 block w-full rounded-lg border border-white/10 bg-black/20 px-2 py-2 text-slate-200" /></label>
           </div>
           {thresholdSensitive ? <label className="mt-3 flex items-start gap-2 text-xs text-amber-200"><input type="checkbox" checked={thresholdsAcknowledged} onChange={(event) => setThresholdsAcknowledged(event.target.checked)} className="mt-0.5" />I understand these sensitive threshold overrides may broaden or narrow detected signals and require mask review.</label> : null}
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3"><span className="text-xs text-slate-600">{proposal ? `Before ${dateRangeLabel(proposal.before)} · After ${dateRangeLabel(proposal.after)} · Cloud ≤ ${proposal.max_cloud_cover}%` : "No remote request runs until this proposal is confirmed."}</span><button onClick={() => { if (!proposal) prepare(); else if (!confirmed && (!thresholdSensitive || thresholdsAcknowledged)) confirmProposal(); }} disabled={loading || confirmed || (thresholdSensitive && !thresholdsAcknowledged)} className="rounded-xl border border-white/15 px-4 py-3 text-xs text-white">{loading ? "Processing…" : proposal ? (confirmed ? "Analysis running / complete" : "Confirm & run analysis") : "Prepare proposal"}</button></div>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3"><span className="text-xs text-slate-600">{proposal ? `Before ${dateRangeLabel(proposal.before)} · After ${dateRangeLabel(proposal.after)} · Cloud ≤ ${proposal.max_cloud_cover}%` : "No remote request runs until this proposal is confirmed."}</span><button type="button" onClick={handlePrimaryAction} disabled={loading || confirmed || (thresholdSensitive && !thresholdsAcknowledged)} className="rounded-xl bg-white px-4 py-3 text-xs font-medium text-black disabled:cursor-not-allowed disabled:opacity-50">{loading ? "Processing…" : proposal ? (confirmed ? "Analysis running / complete" : "Confirm & run analysis") : "Prepare proposal"}</button></div>
         </div>
 
         {error ? <p className="mt-3 rounded-xl border border-red-400/20 bg-red-400/5 p-3 text-xs text-red-300">{error}</p> : null}
